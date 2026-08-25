@@ -1,0 +1,557 @@
+% ============================================================
+% 整合导言区：国赛格式 + 算法/假设环境 + Draft 提速开关
+% 编译方式: latexmk -xelatex (由 VS Code 配置一键调用)
+% ============================================================
+
+% ---------- 草稿模式开关 ----------
+% 取消下一行注释进入极速草稿模式：图片变方框、关闭超链接书签，
+% 编译速度通常提升 3-8 倍，适合改文字/调公式阶段。
+%\def\FASTDRAFT{}
+
+\ifdefined\FASTDRAFT
+  \documentclass[draft,12pt,a4paper]{ctexart}
+\else
+  \documentclass[fontset=windows,12pt,a4paper]{ctexart}
+\fi
+
+% ---------- 页面几何 ----------
+\usepackage{geometry}
+\geometry{
+    paperwidth=210mm, paperheight=297mm,
+    left=2.5cm, right=2.5cm,
+    top=2.5cm, bottom=2.5cm
+}
+
+% ---------- 数学 ----------
+\usepackage{amsmath,amsfonts,amssymb,bm,amsthm}
+
+% ---------- 图片与颜色 ----------
+\ifdefined\FASTDRAFT
+  \usepackage[draft]{graphicx}
+\else
+  \usepackage{graphicx}
+  \DeclareGraphicsExtensions{.pdf,.png,.jpg,.jpeg}
+\fi
+\usepackage{xcolor}
+
+% ---------- 子图 ----------
+\usepackage{subcaption}
+
+% ---------- 表格（三线表 + 复杂表格） ----------
+\usepackage{booktabs,tabularx,multirow,array,longtable,colortbl}
+\renewcommand{\heavyrulewidth}{2.25pt}
+\renewcommand{\lightrulewidth}{0.75pt}
+\renewcommand{\cmidrulewidth}{0.75pt}
+\renewcommand{\arraystretch}{1.25}
+
+% ---------- 浮动体 ----------
+\usepackage{float}
+
+% ---------- 列表 ----------
+\usepackage[shortlabels]{enumitem}
+\setlist{nosep,leftmargin=1.5em}
+
+% ---------- 算法与代码 ----------
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\floatname{algorithm}{算法}
+\renewcommand{\algorithmicrequire}{\textbf{输入：}}
+\renewcommand{\algorithmicensure}{\textbf{输出：}}
+
+\usepackage{listings}
+\lstset{
+    language=Python,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{orange},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    frameround=tttt,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+    xleftmargin=2em,
+    xrightmargin=1em,
+    aboveskip=1em,
+    belowskip=1em
+}
+
+% ---------- 页眉页脚 ----------
+\usepackage{fancyhdr,lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+% ---------- 标题格式（国赛推荐） ----------
+\ctexset{
+    section = {
+        number = \chinese{section}、,  % ← 加这一行
+        format = \zihao{3}\heiti\bfseries\centering,
+        beforeskip = 1.0ex plus 0.5ex minus 0.2ex,
+        afterskip  = 1.0ex plus 0.5ex minus 0.2ex
+    },
+    subsection = {
+        format = \zihao{4}\heiti\bfseries\raggedright,
+        beforeskip = 0.8ex plus 0.3ex minus 0.1ex,
+        afterskip  = 0.8ex plus 0.3ex minus 0.1ex
+    },
+    subsubsection = {
+        format = \zihao{-4}\heiti\bfseries\raggedright,
+        beforeskip = 0.5ex plus 0.2ex minus 0.1ex,
+        afterskip  = 0.5ex plus 0.2ex minus 0.1ex
+    }
+}
+
+% ---------- 图表标题格式 ----------
+\usepackage{caption}
+\captionsetup[figure]{labelsep=space, font=small}
+\captionsetup[table]{labelsep=space, font=small}
+
+% ---------- 行距 ----------
+\usepackage{setspace}
+\setstretch{1.25}
+
+% ---------- 数学定理环境 ----------
+\theoremstyle{definition}
+\newtheorem{definition}{定义}[section]
+\newtheorem{theorem}{定理}[section]
+\newtheorem{lemma}{引理}[section]
+\newtheorem{assumption}{假设}[section]
+
+% ---------- 绘图（按需启用） ----------
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% TikZ 外部化缓存（需 -shell-escape）
+\ifdefined\FASTDRAFT
+\else
+  \usetikzlibrary{external}
+  \tikzexternalize[prefix=tikz-cache/]
+\fi
+
+% ---------- 超链接（务必靠后） ----------
+\ifdefined\FASTDRAFT
+  \usepackage[draft,hidelinks,bookmarks=false,unicode=true]{hyperref}
+\else
+  \usepackage[hidelinks,bookmarks=true,bookmarksnumbered=true,unicode=true]{hyperref}
+\fi
+\usepackage{cleveref}
+
+
+
+% ---------- 自定义命令 ----------
+\newcommand{\diff}{\mathrm{d}}
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+% ============================================================
+% 正文开始
+% ============================================================
+\begin{document}
+
+% ---------- 论文骨架所需补充命令（模板导言区未定义） ----------
+\newcommand{\keywords}[1]{\par\vspace{6pt}\noindent\textbf{关键词：#1}\par}
+
+\renewcommand{\lstlistingname}{代码}
+
+%================ 首页三要素 =================
+\begin{center}
+  {\huge\bfseries 基于\textbf{xxx模型}的\textbf{xxx问题}研究\par}
+\end{center}
+
+
+%================ 摘要 =================
+% 单独占一页。写作提示：按"针对问题X，考虑到...，使用了\textbf{xxx模型}，利用\textbf{xxx方法}，得到\textbf{xxx关键指标}，说明\textbf{xxx效果}"的句式撰写，保持四问四段或四问一段的紧凑结构。
+\begin{center}
+  {\zihao{4}\bfseries \textbf{摘\quad 要}}
+\end{center}
+\vspace{0.1cm}
+
+针对问题一，考虑到\textbf{xxx实际约束与数据特征}，建立了\textbf{xxx基础模型}，利用\textbf{xxx方法}对\textbf{xxx对象}进行定量刻画，得到\textbf{xxx关键指标}，说明\textbf{xxx核心规律/效果}。
+
+针对问题二，在问题一的基础上引入\textbf{xxx因素}，构建\textbf{xxx机理分析/统计检验模型}，采用\textbf{xxx方法}求解，得到\textbf{xxx差异/关联性结论}，揭示\textbf{xxx内在机制}。
+
+针对问题三，基于\textbf{xxx理论假设与历史数据}，建立\textbf{xxx预测/推演模型}，通过\textbf{xxx验证方法}（如回测、交叉验证等）评估模型性能，证明\textbf{xxx可靠性}，并给出\textbf{xxx估计结果}。
+
+针对问题四，综合考虑\textbf{xxx多目标冲突}，设计\textbf{xxx优化/决策模型}，利用\textbf{xxx优化算法}求解，得到\textbf{xxx最优策略或帕累托前沿}，实现\textbf{xxx目标间的有效平衡}。
+
+\vspace{6pt}
+\keywords{关键词1; 关键词2; 关键词3; 关键词4; 关键词5}
+\newpage
+
+%================ 1 问题重述 =================
+% 单独占一页。写作提示：问题背景简述研究场景与核心对象；问题的提出用enumerate清晰列出各问。
+\section{问题重述}
+\subsection{问题背景}
+（简述实际背景与研究对象，1-2段即可。）
+
+实际问题中常涉及如下核心关系：
+\begin{equation}
+  \text{example}
+  \label{eq:background-example}
+\end{equation}
+其中，式\eqref{eq:background-example}描述了\textbf{xxx变量}之间的\textbf{xxx约束/动力学关系}。
+
+\subsection{问题的提出}
+基于上述背景，本文需解决以下问题：
+\begin{enumerate}[label=\arabic*.]
+  \item \textbf{问题一（基础分析/评价）}：\textbf{xxx任务描述}，要求建立\textbf{xxx模型}，给出\textbf{xxx结果}。
+  \item \textbf{问题二（机理/差异探究）}：\textbf{xxx任务描述}，分析\textbf{xxx原因/差异}，揭示\textbf{xxx机制}。
+  \item \textbf{问题三（预测/推演）}：\textbf{xxx任务描述}，基于\textbf{xxx数据/假设}，预测\textbf{xxx趋势或估计xxx参数}。
+  \item \textbf{问题四（优化/决策）}：\textbf{xxx任务描述}，在\textbf{xxx约束}下，设计\textbf{xxx最优策略/方案}。
+\end{enumerate}
+
+%================ 2 问题分析 =================
+% 单独占一页。写作提示：用1段总起+enumerate分述，每问对应一段分析逻辑，体现从整体到局部的拆解思路。
+\newpage
+\section{问题分析}
+
+本文的总体分析思路如下：首先对\textbf{xxx原始数据}进行预处理与探索性分析，确保数据质量；随后针对各问依次建立模型并求解。
+
+\begin{enumerate}[label=\arabic*.]
+  \item \textbf{问题一}：该问题属于\textbf{xxx类型}（如评价/分类/聚类），核心在于\textbf{xxx}。考虑到\textbf{xxx数据特征/约束条件}，拟采用\textbf{xxx模型}，利用\textbf{xxx方法}提取\textbf{xxx关键指标}。
+  \item \textbf{问题二}：该问题要求探究\textbf{xxx差异/关联/机理}。拟通过\textbf{xxx统计检验/对比实验/敏感性分析}，量化\textbf{xxx因素}的影响，并结合\textbf{xxx理论}解释其内在原因。
+  \item \textbf{问题三}：该问题属于\textbf{xxx预测/估计问题}。考虑到\textbf{xxx时序/空间/因果特征}，拟构建\textbf{xxx模型}，采用\textbf{xxx训练/求解策略}，并通过\textbf{xxx验证手段}评估模型\textbf{xxx精度与稳健性}。
+  \item \textbf{问题四}：该问题属于\textbf{xxx多目标优化/决策问题}，需在\textbf{xxx目标}与\textbf{xxx约束}之间寻求平衡。拟建立\textbf{xxx优化模型}，利用\textbf{xxx算法}求解，给出\textbf{xxx推荐方案}。
+\end{enumerate}
+
+%================ 3 模型假设 =================
+% 与符号说明共占一页。写作提示：假设需明确、可检验、服务于模型简化，通常3-6条，按重要性或出现顺序排列。
+\newpage
+\section{模型假设}
+
+\textbf{1. 关于研究对象的基本假设：}\textbf{xxx对象}在\textbf{xxx条件}下满足\textbf{xxx性质}（如均匀性、独立性、连续性等）。
+
+\textbf{2. 关于数据与观测的假设：}观测数据\textbf{xxx}（如无系统偏差、采样频率足够、缺失机制为随机缺失等）。
+
+\textbf{3. 关于环境与边界的假设：}\textbf{xxx外部因素}在\textbf{xxx时间/空间范围}内保持\textbf{xxx状态}（如恒定、可忽略、服从已知分布等）。
+
+\textbf{4. 关于模型适用范围的假设：}所建模型仅在\textbf{xxx定义域/条件}下有效，外推时需\textbf{xxx额外验证}。
+
+%================ 4 符号说明 =================
+% 与模型假设共占一页。写作提示：符号需统一、简洁、有明确物理/数学含义，按出现顺序或逻辑分组排列。条目较多时可以开两列
+\section{符号说明}
+本文主要用到以下符号。
+\begin{table}[H]\centering
+  \caption{主要符号说明}\label{tab:symbol}
+  \small
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{符号} & \textbf{说明} & \textbf{单位} \\
+    \midrule
+    $x$ & example & example \\
+    $y$ & example & example \\
+    $z$ & example & example \\
+    $\theta$ & example & example \\
+    $f(\cdot)$ & example & example \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%================ 5 数据预处理与结构特征 =================
+% 单独占一页。写作提示：展示数据来源、规模、异常值处理流程与初步可视化，为后续建模奠定数据基础。
+\newpage
+\section{数据预处理与结构特征}
+\subsection{数据来源与规模}
+本文使用的数据来源于\textbf{xxx}，包含\textbf{xxx样本量}，覆盖\textbf{xxx维度/时间范围}。
+
+\subsection{异常值处理}
+针对原始数据中的质量问题，主要进行以下处理：
+\begin{enumerate}[label=\arabic*.]
+  \item \textbf{异常类型A（如跳变/离群）}：采用\textbf{xxx判定准则}（如3$\sigma$原则、箱线图、领域规则）识别，并以\textbf{xxx方式}修正或剔除。
+  \item \textbf{异常类型B（如缺失/零值）}：对于\textbf{xxx原因}导致的缺失，采用\textbf{xxx插补/删除策略}。
+  \item \textbf{异常类型C（如量纲/格式不一致）}：统一\textbf{xxx标准}，确保数据\textbf{xxx一致性}。
+\end{enumerate}
+
+\subsection{数据可视化与结构特征}
+通过\textbf{xxx图表}（如散点图、时序图、热力图）对数据进行初步探索，发现\textbf{xxx分布特征/趋势/聚类结构}，为模型假设提供经验支撑。
+
+\newpage
+
+%================ 6 问题一 =================
+% 写作提示：【核心要求】本节仅保留\section{问题一：xxx}，不添加任何\subsection或小标题。
+% 直接按"建模→求解→结果解读"三段式撰写，重要模型名、方法名、指标、结论加粗。
+\section{问题一：\textbf{xxx问题简述}}
+
+首先，考虑到\textbf{xxx实际背景与核心约束}，将\textbf{xxx研究对象}抽象为\textbf{xxx数学结构}。设\textbf{xxx决策/状态变量}为$\boldsymbol{x}$，\textbf{xxx参数}为$\boldsymbol{\theta}$，则\textbf{xxx模型}（如\textbf{xxx名称}）可表述为
+\begin{equation}\label{eq:q1-model}
+  \text{example}
+\end{equation}
+其中，式\eqref{eq:q1-model}中各项分别表示\textbf{xxx含义}；目标函数/等式约束反映\textbf{xxx优化目标/守恒律}；不等式约束刻画\textbf{xxx物理/实际限制}。该模型的核心思想在于\textbf{xxx机理/逻辑}，适用于\textbf{xxx场景}，其合理性基于\textbf{xxx理论/假设}。
+
+在求解过程中，利用\textbf{xxx算法/数值方法/解析推导}对模型进行处理。具体地，首先\textbf{xxx步骤一（如初始化/降维/变换）}；其次\textbf{xxx步骤二（如迭代/搜索/积分）}；最终得到\textbf{xxx关键指标}（如\textbf{xxx效率/误差/分级结果}）。求解流程如算法\ref{alg:q1}所示。
+
+\begin{algorithm}[H]
+\caption{问题一求解流程示例}\label{alg:q1}
+\begin{algorithmic}[1]
+\Require \textbf{xxx输入数据/参数}
+\Ensure \textbf{xxx输出结果/指标}
+\State \textbf{xxx初始化操作}
+\State \textbf{xxx核心计算步骤}
+\State \textbf{xxx收敛判断/后处理}
+\State \Return \textbf{xxx最终结果}
+\end{algorithmic}
+\end{algorithm}
+
+计算结果如表\ref{tab:q1-result}与图\ref{fig:q1-result}所示。
+
+\begin{table}[H]\centering
+  \caption{问题一关键结果示例}\label{tab:q1-result}
+  \small
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{指标} & \textbf{数值} & \textbf{单位} \\
+    \midrule
+    example & example & example \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+
+结果表明，\textbf{xxx核心结论}（如\textbf{xxx指标}达到\textbf{xxx数值}），说明\textbf{xxx实际意义/效果}。进一步分析可知，\textbf{xxx深层原因/机理}，验证了所建模型在\textbf{xxx方面}的\textbf{xxx有效性/合理性}。
+
+%================ 7 问题二 =================
+% 写作提示：同问题一，不添加小标题，直接展示完整建模-求解-解读过程。
+
+\section{问题二：\textbf{xxx问题简述}}
+
+在问题一的基础上，进一步探究\textbf{xxx差异/关联/机理}。考虑到\textbf{xxx因素}对\textbf{xxx结果}的潜在影响，引入\textbf{xxx变量/假设}，构建\textbf{xxx模型}（如\textbf{xxx统计检验模型/微分方程/网络模型}）。
+
+设\textbf{xxx对照组/实验组}分别为$\mathcal{G}_1$与$\mathcal{G}_2$，\textbf{xxx效应量/指标}记为$\Delta$，则\textbf{xxx检验/度量}可定义为
+\begin{equation}\label{eq:q2-model}
+  \Delta = \text{example}
+\end{equation}
+该式的本质在于\textbf{xxx数学含义}，能够有效量化\textbf{xxx差异程度/关联强度}。
+
+利用\textbf{xxx方法}（如\textbf{xxx检验、置换检验、灵敏度分析}）进行求解。具体步骤为：首先\textbf{xxx步骤一}；其次\textbf{xxx步骤二}；最终得到\textbf{xxx统计量/解析解}。关键结果如表\ref{tab:q2-result}所示。
+
+\begin{table}[H]\centering
+  \caption{问题二关键结果示例}\label{tab:q2-result}
+  \small
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{指标} & \textbf{数值} & \textbf{显著性/含义} \\
+    \midrule
+    example & example & example \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+结果表明，\textbf{xxx核心发现}（如\textbf{xxx因素}对\textbf{xxx结果}具有\textbf{xxx显著影响/强相关性}），其内在机理可解释为\textbf{xxx物理/经济/社会原因}。这一发现与问题一中\textbf{xxx结论}相互印证，为后续\textbf{xxx预测/优化}提供了\textbf{xxx理论依据/约束条件}。
+
+%================ 8 问题三 =================
+% 写作提示：同前，聚焦预测/推演/估计，需明确模型假设、训练/求解过程、验证手段与不确定性量化。
+\section{问题三：\textbf{xxx问题简述}}
+
+基于\textbf{xxx历史数据/机理规律}，对\textbf{xxx未来状态/未知参数}进行预测/估计。首先进行\textbf{xxx特征提取/降维/变换}，得到\textbf{xxx有效特征集}$\boldsymbol{\phi}$。
+
+考虑到\textbf{xxx数据特征}（如\textbf{xxx时序性/非线性/高维稀疏}），建立\textbf{xxx预测模型}（如\textbf{xxx回归/时间序列/机器学习模型}），其数学形式为
+\begin{equation}\label{eq:q3-model}
+  \hat{y} = f(\boldsymbol{\phi}; \boldsymbol{w}) = \text{example}
+\end{equation}
+其中，$\boldsymbol{w}$为\textbf{xxx模型参数}，通过\textbf{xxx方法}（如\textbf{xxx最小化损失函数}）进行学习：
+\begin{equation}\label{eq:q3-train}
+  \boldsymbol{w}^* = \argmin_{\boldsymbol{w}} \text{example}
+\end{equation}
+
+在求解过程中，采用\textbf{xxx训练策略}（如\textbf{xxx交叉验证/早停/正则化}）防止过拟合，并利用\textbf{xxx回测/滚动预测/自助法}评估模型性能。预测结果如表\ref{tab:q3-result}与图\ref{fig:q3-result}所示。
+
+\begin{table}[H]\centering
+  \caption{问题三预测/估计结果示例}\label{tab:q3-result}
+  \small
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{对象} & \textbf{预测值/估计值} & \textbf{置信区间/误差范围} \\
+    \midrule
+    example & example & example \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+
+结果表明，\textbf{xxx核心结论}（如\textbf{xxx指标}在\textbf{xxx范围}内，预测\textbf{xxx趋势}），模型\textbf{xxx精度指标}达到\textbf{xxx水平}，满足\textbf{xxx应用需求}。进一步分析\textbf{xxx不确定性来源}（如\textbf{xxx参数敏感性/数据噪声/模型结构误差}），可知\textbf{xxx改进方向}。
+
+%================ 9 问题四 =================
+% 写作提示：同前，聚焦优化/决策，需明确决策变量、目标函数、约束条件、求解算法与推荐方案。
+
+\section{问题四：\textbf{xxx问题简述}}
+
+综合考虑\textbf{xxx多目标冲突}（如\textbf{xxx成本与效益、时间与质量、风险与收益}），对\textbf{xxx策略/方案}进行优化。设\textbf{xxx决策变量}为$\boldsymbol{x}=(x_1,x_2,\dots,x_n)$，则\textbf{xxx优化模型}可表述为
+\begin{gather}
+  \min_{\boldsymbol{x}}\ \big\{\,f_1(\boldsymbol{x}),\ f_2(\boldsymbol{x}),\ \dots,\ f_m(\boldsymbol{x})\,\big\}
+    \label{eq:opt}\\[2pt]
+  \text{s.t.}\quad \boldsymbol{x}\in \Omega\ \cap\ \{g_j(\boldsymbol{x})\le 0,\ j=1,\dots,J\},
+  \label{eq:opt-constraint}
+\end{gather}
+其中，式\eqref{eq:opt}中$f_i(\boldsymbol{x})$表示\textbf{xxx第$i$个目标函数}（如\textbf{xxx成本/时间/误差}）；式\eqref{eq:opt-constraint}中$\Omega$为\textbf{xxx决策空间}，$g_j(\boldsymbol{x})$刻画\textbf{xxx第$j$项约束}（如\textbf{xxx资源/物理/政策限制}）。
+
+针对上述\textbf{xxx多目标优化问题}，采用\textbf{xxx求解方法}（如\textbf{xxx加权求和/ε-约束法/遗传算法/模拟退火}）进行处理。具体地，\textbf{xxx求解流程描述}，最终得到\textbf{xxx帕累托前沿/最优解集/推荐方案}。优化结果如表\ref{tab:q4-result}所示。
+
+\begin{table}[H]\centering
+  \caption{问题四优化结果与推荐方案示例}\label{tab:q4-result}
+  \small
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{决策变量/方案} & \textbf{目标1} & \textbf{目标2} \\
+    \midrule
+    example & example & example \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+结果表明，所推荐的\textbf{xxx方案}在\textbf{xxx目标}上达到\textbf{xxx效果}，相较于\textbf{xxx基准方案}，\textbf{xxx指标}提升/降低\textbf{xxx百分比}。该方案在\textbf{xxx约束}下具有\textbf{xxx可行性/稳健性}，可为\textbf{xxx实际决策}提供\textbf{xxx直接参考}。
+
+%================ 10 模型的分析与检验 =================
+% 写作提示：包含灵敏度分析、模型对比、稳健性检验等，可保留必要的层次结构。
+\section{模型的分析与检验}
+\subsection{灵敏度分析}
+
+\subsubsection{问题一：关键参数/假设的稳健性}
+对\textbf{xxx核心参数}进行\textbf{xxx百分比}的上下扰动，观察\textbf{xxx输出指标}的变化幅度。结果显示，\textbf{xxx结论}，表明问题一模型在\textbf{xxx方面}具有\textbf{xxx稳健性/敏感性}。
+
+\subsubsection{问题三：预测/估计结果的敏感性}
+\textbf{拟合窗口扰动}：改变\textbf{xxx数据窗口}（如\textbf{xxx范围}），重新训练模型，\textbf{xxx指标}变化\textbf{xxx范围}，说明\textbf{xxx结论}。
+
+\textbf{测量噪声扰动}：对输入数据叠加\textbf{xxx水平}的高斯噪声，\textbf{xxx输出}变化\textbf{xxx范围}，验证了\textbf{xxx结论}。
+
+\subsubsection{问题四：优化方案的敏感性}
+对\textbf{xxx成本/时间/效用参数}进行扰动，重新求解优化模型，推荐方案\textbf{xxx变化情况}，表明\textbf{xxx结论}。
+
+\subsection{模型对比}
+将本文所建\textbf{xxx模型}与\textbf{xxx基准模型}（如\textbf{xxx传统方法/文献方法/简单启发式}）进行对比。在\textbf{xxx评价指标}下，本文模型\textbf{xxx优势}，但在\textbf{xxx方面}存在\textbf{xxx局限}。
+
+%================ 11 模型的评价、改进与推广 =================
+% 写作提示：客观总结优点（2-4条）、缺点（2-3条）、改进方向（2-3条）、推广价值（1-2条）。
+%优点需要具体量化展示,展示能体现优越性具体关键指标的数据,与其他模型/前人方法的具体优越处/改进处.
+% 量化写作范式：
+%   [基准值] → 采用前人方法/纯机理/纯数据模型得到的指标
+%   [本模型值] → 本文方法得到的指标  
+%   [相对提升] → (本模型-基准)/基准，用%表示
+%   [显著性] → p值、置信区间、R²、RMSE、MAPE等统计量
+\section{模型的评价、改进与推广}
+
+\subsection{模型的优点}
+\begin{enumerate}[itemsep=1pt]
+  \item \textbf{机理与数据融合的精度优势}：相较于\textbf{[纯机理模型名/基准方法]}在\textbf{[某数据集/某场景]}上的\textbf{[某指标，如RMSE/准确率]}为\textbf{[基准值，如0.82]}，本模型通过融合\textbf{[某领域知识]}与\textbf{[某数据方法，如LSTM/XGBoost]}，将该指标提升至\textbf{[本模型值，如0.91]}，相对改进\textbf{[相对提升，如+10.9\%]}；在\textbf{[另一关键指标，如MAPE]}上从\textbf{[基准值]}降至\textbf{[本模型值]}，验证了融合策略对\textbf{[某类问题]}的显著增益。
+  
+  \item \textbf{稳健性与不确定性量化}：基于\textbf{[Bootstrap/蒙特卡洛/交叉验证]}（$n=$\textbf{[重采样次数，如1000]}次），关键参数\textbf{[参数名]}的95\%置信区间为\textbf{[下限, 上限]}；敏感性分析显示，当\textbf{[某输入变量]}在\textbf{[波动范围，如$\pm20\%$]}内变化时，输出\textbf{[某指标]}的变异系数仅为\textbf{[CV值，如3.2\%]}，远小于\textbf{[某阈值/前人结果的某值]}，表明结论具有\textbf{[统计显著性水平，如$p<0.01$]}的稳健性。
+  
+  \item \textbf{可解释性与工程落地指标}：模型输出\textbf{[某决策/某排序/某阈值]}的\textbf{[某业务指标，如Top-3命中率/误报率]}达到\textbf{[具体数值，如87.3\%]}，相比\textbf{[现有系统/人工经验]}的\textbf{[基准值，如72.1\%]}提升\textbf{[相对提升]}；单次推理耗时\textbf{[时间，如<0.05s]}，满足\textbf{[某实时性要求，如毫秒级决策]}的工程约束，已在\textbf{[某环节]}实现\textbf{[某效果，如将某流程缩短X\%]}。
+  
+  \item \textbf{系统化框架的效率优势}：从\textbf{[某规模数据，如10万条]}的预处理到模型收敛，全流程耗时\textbf{[总时间，如<15min]}；相比\textbf{[某传统方法/某软件]}的\textbf{[基准耗时]}，计算效率提升约\textbf{[倍数或百分比]}；在\textbf{[某硬件环境]}上内存占用峰值仅为\textbf{[数值，如1.2GB]}，具备\textbf{[某规模，如城市级/企业级]}场景下的部署可行性。
+\end{enumerate}
+\subsection{模型的缺点}
+\begin{enumerate}[itemsep=1pt]
+  \item \textbf{假设局限性}：\textbf{xxx假设}在\textbf{xxx极端场景}下可能不成立，导致\textbf{xxx偏差}。
+  \item \textbf{数据依赖}：模型性能受\textbf{xxx数据质量/规模}制约，在\textbf{xxx小样本/高噪声}情况下\textbf{xxx表现下降}。
+  \item \textbf{计算复杂度}：\textbf{xxx算法}在\textbf{xxx大规模实例}下求解时间较长，实时性有待提升。
+\end{enumerate}
+
+\subsection{模型的改进}
+\begin{enumerate}[itemsep=1pt]
+  \item \textbf{放松假设}：引入\textbf{xxx随机/动态因素}，构建\textbf{xxx随机模型/动态模型}，提升\textbf{xxx场景适应性}。
+  \item \textbf{数据增强}：结合\textbf{xxx生成模型/迁移学习}，解决\textbf{xxx小样本/跨域}问题。
+  \item \textbf{算法加速}：采用\textbf{xxx并行计算/近似算法/代理模型}，降低\textbf{xxx计算成本}。
+\end{enumerate}
+
+\subsection{模型的推广}
+\begin{enumerate}[itemsep=1pt]
+  \item \textbf{领域迁移}：本文所建\textbf{xxx模型/方法}可推广至\textbf{xxx相关领域}（如\textbf{xxx}），只需调整\textbf{xxx参数/约束}。
+  \item \textbf{方法论扩展}：\textbf{xxx分析框架/优化思想}可为\textbf{xxx同类问题}提供\textbf{xxx通用解决思路}。
+\end{enumerate}
+
+\section{AI工具使用说明}
+（按竞赛要求如实说明AI辅助范围，如文献检索、代码调试、语言润色等，并明确最终论文的原创性责任。）
+
+\newpage
+%================ 12 参考文献 =================
+% 写作提示：优先引用权威来源（官方文件、顶级期刊、经典教材），格式统一。
+\zihao{5}
+\begin{thebibliography}{99}
+  \bibitem{example1} Author. Title[J]. Journal, Year, Vol(Issue): Pages.
+  \bibitem{example2} Author. Title[M]. City: Publisher, Year.
+  \bibitem{example3} Author. Title[C]//Proceedings. City: Publisher, Year: Pages.
+  \bibitem{example4} Author. Title[R/OL]. Year. \url{https://example.com}
+\end{thebibliography}
+
+%================ 附录 =================
+% 写作提示：附录包含支撑材料说明、重要推导、补充图表、核心代码等。
+\newpage
+\appendix
+\ctexset{section={name={附录,：}, number=\chinese{section}}}
+\renewcommand{\figurename}{附图}
+\renewcommand{\tablename}{附表}
+\setcounter{figure}{0}
+\setcounter{table}{0}
+\section{数据来源与支撑材料说明}\label{app:data}
+\subsection{数据来源}
+\begin{itemize}[itemsep=1pt]
+  \item \textbf{xxx数据集}：来源于\textbf{xxx机构/平台}，包含\textbf{xxx字段}，用于\textbf{xxx分析}。
+  \item \textbf{xxx补充数据}：通过\textbf{xxx方式}获取，用于\textbf{xxx验证}。
+\end{itemize}
+\subsection{支撑材料文件列表}
+\begin{itemize}[itemsep=1pt]
+  \item \texttt{data\_preprocessing.py}：数据清洗与特征工程代码
+  \item \texttt{model\_q1.py}：问题一模型求解代码
+  \item \texttt{model\_q2.py}：问题二模型求解代码
+  \item \texttt{model\_q3.py}：问题三模型求解代码
+  \item \texttt{model\_q4.py}：问题四模型求解代码
+  \item \texttt{sensitivity\_analysis.py}：灵敏度分析代码
+\end{itemize}
+
+\section{主要代码}\label{app:code}
+
+\subsection{数据预处理（\texttt{preprocessing.py}）}
+\begin{lstlisting}[language=Python, caption=数据清洗与特征工程示例（节选）]
+# 此处粘贴核心预处理代码
+import numpy as np
+import pandas as pd
+
+# example: 数据读取与异常值处理
+# df = pd.read_csv('data.csv')
+# df = df.dropna()  # 示例：删除缺失值
+\end{lstlisting}
+
+\subsection{问题一模型求解（\texttt{model\_q1.py}）}
+\begin{lstlisting}[language=Python, caption=问题一核心求解代码示例（节选）]
+# 此处粘贴问题一代码
+# example: 模型定义与求解
+# result = model.fit(X_train, y_train)
+# print(result.summary())
+\end{lstlisting}
+
+\subsection{问题二模型求解（\texttt{model\_q2.py}）}
+\begin{lstlisting}[language=Python, caption=问题二核心求解代码示例（节选）]
+# 此处粘贴问题二代码
+\end{lstlisting}
+
+\subsection{问题三模型求解（\texttt{model\_q3.py}）}
+\begin{lstlisting}[language=Python, caption=问题三核心求解代码示例（节选）]
+# 此处粘贴问题三代码
+\end{lstlisting}
+
+\subsection{问题四模型求解（\texttt{model\_q4.py}）}
+\begin{lstlisting}[language=Python, caption=问题四核心求解代码示例（节选）]
+# 此处粘贴问题四代码
+\end{lstlisting}
+
+\subsection{灵敏度分析（\texttt{sensitivity.py}）}
+\begin{lstlisting}[language=Python, caption=灵敏度分析代码示例（节选）]
+# 此处粘贴灵敏度分析代码
+\end{lstlisting}
+
+\end{document}
