@@ -1,0 +1,666 @@
+% ============================================================
+% 整合导言区：国赛格式 + 算法/假设环境 + Draft 提速开关
+% 编译方式: latexmk -xelatex (由 VS Code 配置一键调用)
+% ============================================================
+
+% ---------- 草稿模式开关 ----------
+% 取消下一行注释进入极速草稿模式：图片变方框、关闭超链接书签，
+% 编译速度通常提升 3-8 倍，适合改文字/调公式阶段。
+%\def\FASTDRAFT{}
+
+\ifdefined\FASTDRAFT
+  \documentclass[draft,12pt,a4paper]{ctexart}
+\else
+  \documentclass[fontset=windows,12pt,a4paper]{ctexart}
+\fi
+
+% ---------- 页面几何 ----------
+\usepackage{geometry}
+\geometry{
+    paperwidth=210mm, paperheight=297mm,
+    left=2.5cm, right=2.5cm,
+    top=2.5cm, bottom=2.5cm
+}
+
+% ---------- 数学 ----------
+\usepackage{amsmath,amsfonts,amssymb,bm,amsthm}
+
+% ---------- 图片与颜色 ----------
+\ifdefined\FASTDRAFT
+  \usepackage[draft]{graphicx}
+\else
+  \usepackage{graphicx}
+  \DeclareGraphicsExtensions{.pdf,.png,.jpg,.jpeg}
+\fi
+\usepackage{xcolor}
+
+% ---------- 子图 ----------
+\usepackage{subcaption}
+
+% ---------- 表格（三线表 + 复杂表格） ----------
+\usepackage{booktabs,tabularx,multirow,array,longtable,colortbl}
+\renewcommand{\heavyrulewidth}{2.25pt}
+\renewcommand{\lightrulewidth}{0.75pt}
+\renewcommand{\cmidrulewidth}{0.75pt}
+\renewcommand{\arraystretch}{1.25}
+
+% ---------- 浮动体 ----------
+\usepackage{float}
+
+% ---------- 列表 ----------
+\usepackage[shortlabels]{enumitem}
+\setlist{nosep,leftmargin=1.5em}
+
+% ---------- 算法与代码 ----------
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\floatname{algorithm}{算法}
+\renewcommand{\algorithmicrequire}{\textbf{输入：}}
+\renewcommand{\algorithmicensure}{\textbf{输出：}}
+
+\usepackage{listings}
+\lstset{
+    language=Python,
+    basicstyle=\small\ttfamily,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black}\itshape,
+    stringstyle=\color{orange},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=8pt,
+    backgroundcolor=\color{gray!10},
+    frame=single,
+    frameround=tttt,
+    breaklines=true,
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+    xleftmargin=2em,
+    xrightmargin=1em,
+    aboveskip=1em,
+    belowskip=1em
+}
+
+% ---------- 页眉页脚 ----------
+\usepackage{fancyhdr,lastpage}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+% ---------- 标题格式（国赛推荐） ----------
+\ctexset{
+    section = {
+        number = \chinese{section}、,
+        format = \zihao{3}\heiti\bfseries\centering,
+        beforeskip = 1.0ex plus 0.5ex minus 0.2ex,
+        afterskip  = 1.0ex plus 0.5ex minus 0.2ex
+    },
+    subsection = {
+        format = \zihao{4}\heiti\bfseries\raggedright,
+        beforeskip = 0.8ex plus 0.3ex minus 0.1ex,
+        afterskip  = 0.8ex plus 0.3ex minus 0.1ex
+    },
+    subsubsection = {
+        format = \zihao{-4}\heiti\bfseries\raggedright,
+        beforeskip = 0.5ex plus 0.2ex minus 0.1ex,
+        afterskip  = 0.5ex plus 0.2ex minus 0.1ex
+    }
+}
+
+% ---------- 图表标题格式 ----------
+\usepackage{caption}
+\captionsetup[figure]{labelsep=space, font=small}
+\captionsetup[table]{labelsep=space, font=small}
+
+% ---------- 行距 ----------
+\usepackage{setspace}
+\setstretch{1.25}
+
+% ---------- 数学定理环境 ----------
+\theoremstyle{definition}
+\newtheorem{definition}{定义}[section]
+\newtheorem{theorem}{定理}[section]
+\newtheorem{lemma}{引理}[section]
+\newtheorem{assumption}{假设}[section]
+
+% ---------- 绘图（按需启用） ----------
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+
+% TikZ 外部化缓存（需 -shell-escape）
+\ifdefined\FASTDRAFT
+\else
+  \usetikzlibrary{external}
+  \tikzexternalize[prefix=tikz-cache/]
+\fi
+
+% ---------- 超链接（务必靠后） ----------
+\ifdefined\FASTDRAFT
+  \usepackage[draft,hidelinks,bookmarks=false,unicode=true]{hyperref}
+\else
+  \usepackage[hidelinks,bookmarks=true,bookmarksnumbered=true,unicode=true]{hyperref}
+\fi
+\usepackage{cleveref}
+
+
+
+% ---------- 自定义命令 ----------
+\newcommand{\diff}{\mathrm{d}}
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+
+% ============================================================
+% 正文开始
+% ============================================================
+\begin{document}
+
+% ---------- 论文骨架所需补充命令（模板导言区未定义） ----------
+\newcommand{\keywords}[1]{\par\vspace{6pt}\noindent\textbf{关键词：#1}\par}
+
+\renewcommand{\lstlistingname}{代码}
+
+%================ 首页三要素 =================
+\begin{center}
+  {\huge\bfseries 基于\textbf{TOA定位模型}的\textbf{火箭残骸音爆定位}研究\par}
+\end{center}
+
+
+%================ 摘要 =================
+\begin{center}
+  {\zihao{4}\bfseries \textbf{摘\quad 要}}
+\end{center}
+\vspace{0.1cm}
+
+针对问题一，考虑到音爆信号以恒定声速传播、到达时刻与传播距离成线性关系这一物理约束，建立了\textbf{到达时间（TOA）定位模型}，将音爆发生时刻$t_0$与三维位置一并作为未知量，利用\textbf{平方差分线性化}求取初值、\textbf{非线性最小二乘}做迭代精炼，并辅以多初值扫描排除伪解。理论分析表明，4个未知量至少需要4台监测设备定解，但4台恰好定解不具备任何检错能力，实际布置应不少于\textbf{5台}。对题目给出的7台设备数据，通过\textbf{4台子集枚举}与\textbf{残差检验}判定设备D、F记录异常（残差分别为$-19.4$\,km和$-16.2$\,km，折合时间矛盾约57\,s与48\,s），予以剔除；以A、B、C、E、G五台联合解算，得到残骸音爆位置为\textbf{东经110.499°、北纬27.311°、高程约855\,m}，音爆时刻为系统时钟后\textbf{19.3\,s}。子集投票与蒙特卡洛模拟显示，该结果的水平不确定度约为$\pm1\sim2$\,km，主要由个别台站的系统性偏差引起。
+
+针对问题二，（待问题二方案完成后补充：多残骸情形下震动波与残骸的归属判定模型与最少设备数量分析。）
+
+针对问题三，（待问题三方案完成后补充：基于问题二模型对4个残骸位置与音爆时刻的解算结果。）
+
+针对问题四，（待问题四方案完成后补充：含0.5\,s随机时间误差的模型修正、误差分析与加密布站方案。）
+
+\vspace{6pt}
+\keywords{到达时间定位；非线性最小二乘；异常数据剔除；稳健性检验}
+\newpage
+
+%================ 1 问题重述 =================
+\section{问题重述}
+\subsection{问题背景}
+绝大多数火箭为多级火箭，下面级火箭或助推器完成任务后经级间分离装置分离坠落，坠落过程中残骸跨音速飞行并产生音爆。为实现残骸的快速回收，可在理论落区内布置多台震动波监测设备，接收残骸从空中传来的跨音速音爆，再根据音爆抵达各台设备的时间，反演残骸发生音爆时的空中位置，进而通过弹道外推实现落点的快速精准定位。
+
+设音爆发生点为$S=(x,y,z)$，发生时刻为$t_0$，监测设备$i$的坐标为$P_i=(x_i,y_i,z_i)$，记录到的音爆抵达时刻为$t_i$，音爆在空气中的传播速度为$c$，则有
+\begin{equation}
+  \big\|S-P_i\big\|=c\,(t_i-t_0),\qquad i=1,2,\dots,n,
+  \label{eq:background-toa}
+\end{equation}
+其中，式\eqref{eq:background-toa}描述了音爆点位置、发生时刻与各台设备观测时刻之间的几何约束，是全文各问建模的共同出发点。题目给定$c=340$\,m/s，计算两点间距离时可忽略地面曲率，纬度每度距离近似为111.263\,km，经度每度距离近似为97.304\,km。
+
+\subsection{问题的提出}
+基于上述背景，本文需解决以下问题：
+\begin{enumerate}[label=\arabic*.]
+  \item \textbf{问题一（单残骸定位）}：分析精准确定空中单个残骸音爆位置（经度、纬度、高程）和时间至少需要布置几台监测设备；并从题目给出的7台设备观测数据（三维坐标与音爆抵达时间）中选取合适的数据，计算残骸发生音爆时的位置和时间。
+  \item \textbf{问题二（多残骸归属判定）}：空中有4个残骸时，每台设备按时间先后收到4组震动波。建立数学模型，判定设备接收到的各组震动波来自哪一个残骸，并分析确定4个残骸的音爆位置和时间至少需要布置多少台监测设备。
+  \item \textbf{问题三（多残骸解算）}：利用问题二的模型，从题目给出的7台设备、每台4组抵达时间的数据中选取合适的数据，确定4个残骸发生音爆时的位置和时间（各残骸音爆时刻互不相同，但差别不超过5\,s）。
+  \item \textbf{问题四（含误差修正与布站设计）}：设备记录时间存在0.5\,s随机误差，修正问题二的模型；通过对问题三数据叠加随机误差给出算例并分析结果误差；若时间误差无法降低，给出一种实现精准定位（误差$<1$\,km）的方案，并模拟所需设备位置与观测数据加以验证。
+\end{enumerate}
+
+%================ 2 问题分析 =================
+\newpage
+\section{问题分析}
+
+本文的总体思路如下：先将各台设备的经纬高坐标换算到局部直角坐标系，对观测数据做初步检查；随后以式\eqref{eq:background-toa}为核心建立定位模型，问题一解决单残骸定位与数据筛选，问题二、三在其上扩展出归属判定机制，问题四再针对时间误差做模型修正与布站设计，四个问题层层递进。
+
+\begin{enumerate}[label=\arabic*.]
+  \item \textbf{问题一}：该问题属于\textbf{几何定位问题}。每台设备提供1个观测方程，而未知量有位置3个坐标与音爆时刻共4个，故方程数与未知量数的平衡关系决定了设备数量的下限。难点有三：其一，观测方程关于未知量是非线性的，需设计可靠的初值与迭代策略，避免收敛到高程为负之类的伪解；其二，7台设备中可能混有异常记录，直接用全部数据解算会污染结果，需借助冗余观测做检验；其三，题目要求"选取合适的数据"，意味着数据筛选本身就是求解的一部分。拟建立TOA定位模型，用线性化方法提供初值、非线性最小二乘精炼，并以子集枚举和残差检验完成异常数据的识别与剔除。
+  \item \textbf{问题二}：该问题的核心是\textbf{归属判定}，即4个残骸、每台设备4组观测构成的多对多匹配。单个残骸的情形下到达时刻与距离一一对应，多残骸情形下这一对应关系被打破，需利用"同一残骸到达各台设备的时刻与相应距离相容、不同残骸音爆时刻相差不超过5\,s"等约束构造一致性判据，把归属判定转化为组合优化或聚类问题；设备数量下限则需在归属可判定的前提下，按未知量总数与独立方程数的关系重新分析。
+  \item \textbf{问题三}：该问题是问题二模型在\textbf{实际数据上的应用}。数据规模从7组单时刻变为7台设备各4组时刻，且各残骸音爆时刻不同（差别不超过5\,s），需要先完成归属分组，再对每组残骸分别按问题一的方法解算位置与时刻，并继承异常数据检验机制。
+  \item \textbf{问题四}：该问题属于\textbf{含观测误差的模型修正与设计问题}。0.5\,s的时间误差折算成距离约170\,m，且是随机性的，会使问题三的解产生不可忽视的散布，需要在模型中显式纳入误差项并用统计手段评估影响；若误差无法降低，则需从增加观测冗余的角度设计布站方案，使定位误差压缩到1\,km以内，并用模拟数据验证。
+\end{enumerate}
+
+%================ 3 模型假设 =================
+\newpage
+\section{模型假设}
+
+\textbf{1. 关于传播介质的假设：}音爆在空气中以恒定速度$c=340$\,m/s沿直线传播，不考虑风速、温度分层等因素对声速的影响。落区范围在百公里量级，声速的局地起伏折算后的距离偏差相对观测误差为小量，该简化可以接受。
+
+\textbf{2. 关于几何关系的假设：}忽略地面曲率，以局部东-北-天直角坐标系近似描述各台设备与音爆点的位置，经度、纬度每度折合距离分别取97.304\,km和111.263\,km。
+
+\textbf{3. 关于观测的假设：}各台设备的时钟严格同步，记录的音爆抵达时刻相对于同一系统时钟零时；问题一至问题三中观测时刻的误差仅为数值舍入量级，显著的偏差只可能来自个别设备的记录异常。
+
+\textbf{4. 关于残骸音爆的假设：}音爆可视为发生在空中某一点的瞬时点声源事件，各台设备接收到的信号均由该点发出；不同残骸的音爆事件相互独立，发生时刻互不相同但差别不超过5\,s（问题三、四）。
+
+%================ 4 符号说明 =================
+\section{符号说明}
+本文主要用到以下符号。
+\begin{table}[H]\centering
+  \caption{主要符号说明}\label{tab:symbol}
+  \small
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{符号} & \textbf{说明} & \textbf{单位} \\
+    \midrule
+    $S=(x,y,z)$ & 音爆发生点在局部坐标系中的坐标 & m \\
+    $P_i=(x_i,y_i,z_i)$ & 第$i$台监测设备在局部坐标系中的坐标 & m \\
+    $t_i$ & 第$i$台设备记录的音爆抵达时刻 & s \\
+    $t_0$ & 音爆发生时刻（待求） & s \\
+    $c$ & 音爆传播速度，取340 & m/s \\
+    $r_i$ & 第$i$台设备的定位残差 & m \\
+    $K_{\mathrm{lon}},K_{\mathrm{lat}}$ & 经度、纬度每度折合距离 & m/° \\
+    $n$ & 参与解算的设备台数 & --- \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%================ 5 数据预处理与结构特征 =================
+\newpage
+\section{数据预处理与结构特征}
+\subsection{数据来源与规模}
+问题一使用的数据为题目给出的7台监测设备（编号A至G）的三维坐标与音爆抵达时刻，共7组记录，每组含经度、纬度、高程、抵达时刻4个字段，如表\ref{tab:q1-data}所示。
+
+\begin{table}[H]\centering
+  \caption{问题一监测设备坐标与音爆抵达时刻}\label{tab:q1-data}
+  \small
+  \begin{tabular}{ccccc}
+    \toprule
+    \textbf{设备} & \textbf{经度(°)} & \textbf{纬度(°)} & \textbf{高程(m)} & \textbf{音爆抵达时间(s)} \\
+    \midrule
+    A & 110.241 & 27.204 & 824 & 100.767 \\
+    B & 110.780 & 27.456 & 727 & 112.220 \\
+    C & 110.712 & 27.785 & 742 & 188.020 \\
+    D & 110.251 & 27.825 & 850 & 258.985 \\
+    E & 110.524 & 27.617 & 786 & 118.443 \\
+    F & 110.467 & 27.921 & 678 & 266.871 \\
+    G & 110.047 & 27.121 & 575 & 163.024 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{坐标换算}
+按照模型假设2，以设备A（110.241°E，27.204°N）为原点建立局部东-北-天直角坐标系，换算关系为
+\begin{equation}
+  x_i=(\lambda_i-\lambda_0)\,K_{\mathrm{lon}},\qquad
+  y_i=(\varphi_i-\varphi_0)\,K_{\mathrm{lat}},\qquad
+  z_i=h_i,
+  \label{eq:coord}
+\end{equation}
+其中$(\lambda_i,\varphi_i,h_i)$为设备$i$的经度、纬度、高程，$(\lambda_0,\varphi_0)$为原点经纬度。全部定位计算在局部坐标系中进行，最终结果再换算回经纬度与高程。
+
+\subsection{数据可视化与结构特征}
+图\ref{fig:station-map}给出7台设备的水平分布。设备大体散布在$0.9°\times0.8°$的经纬范围内，台间距数十公里，对落区中部形成包围态势，几何布局有利于三维定位。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.62\textwidth]{fig_station_map.pdf}
+  \caption{监测设备水平分布与音爆点解算位置}\label{fig:station-map}
+\end{figure}
+
+对抵达时刻做初步检查：最早与最晚记录相差约166\,s，若全部来自同一音爆点，对应传播距离相差约56\,km，而台网尺度与此量级相当，单从时刻大小无法排除任何一台设备。因此，数据是否全部有效不能靠先验判断，必须放到定位模型中检验——这正是问题一要求"选取合适的数据"的原因，相关检验与结果在第六部分给出。
+
+%================ 6 问题一 =================
+\newpage
+\section{问题一：单个残骸的音爆定位}
+
+对单个残骸，音爆发生点$S=(x,y,z)$与发生时刻$t_0$均为未知量，连同式\eqref{eq:background-toa}即构成定位模型。这里采用到达时间（TOA）体制而非到达时间差（TDOA）体制：TOA直接使用每台设备记录的绝对抵达时刻$t_i$，把$t_0$作为第4个未知量与位置一起解算，每台设备贡献一个独立方程；TDOA则只用设备间时刻之差，消去$t_0$后仅剩3个位置未知量。二者并非割裂——下文求初值时将各方程两两相减以消去二次项，这一步在代数上与TDOA等价，但相减后$t_0$仍以线性形式保留，故模型本身仍是4未知量的TOA模型。
+
+式\eqref{eq:background-toa}的几何含义是：音爆点位于以设备$i$为球心、$c(t_i-t_0)$为半径的球面上，若干球面的交点即为所求。未知量共4个，每台设备提供1个方程，故\textbf{理论最少需要4台设备}。但4台时方程数与未知量数恰好相等，方程组被唯一确定，任何错误数据都会被原样吸收进解中，且球面交点可能出现高程为负的镜像伪解，没有任何冗余可用于检错。因此实际布置应\textbf{不少于5台}，用冗余观测换取检错与平差能力。题目给出7台数据，是否全部可用，正是需要回答的另一半问题。
+
+将式\eqref{eq:background-toa}两边平方并展开，得
+\begin{equation}
+  \|S\|^2-2P_i\cdot S+\|P_i\|^2=c^2t_i^2-2c^2t_i t_0+c^2t_0^2.
+  \label{eq:squared}
+\end{equation}
+用第$i$式减去第1式，二次项$\|S\|^2$与$c^2t_0^2$被消去，得到关于$(x,y,z,t_0)$的线性方程组
+\begin{equation}
+  2(P_i-P_1)\cdot S-2c^2(t_i-t_1)\,t_0=\|P_i\|^2-\|P_1\|^2-c^2\big(t_i^2-t_1^2\big),
+  \qquad i=2,\dots,n,
+  \label{eq:linear}
+\end{equation}
+对其做最小二乘解即得定位粗值。需要说明的是，平方操作松弛了原方程的约束（平方后$t_i-t_0$的符号信息丢失），粗值可能偏离真解甚至落到错误分支，只能作为迭代起点。
+
+定义残差
+\begin{equation}
+  r_i(S,t_0)=\underbrace{\|S-P_i\|}_{\text{几何距离}}-\underbrace{c\,(t_i-t_0)}_{\text{声波距离}},\qquad i=1,\dots,n,
+  \label{eq:residual}
+\end{equation}
+其物理含义为：当前解下点$S$到设备$i$的直线距离与声波在$t_i-t_0$内传播距离之差，单位是米。若解正确且数据无误，所有$r_i=0$；$r_i$越大，说明第$i$台设备的观测与该解越矛盾。以粗值为初值，用scipy默认的Trust Region Reflective算法求解
+\begin{equation}
+  (S^{*},t_0^{*})=\argmin_{S,\,t_0}\ \sum_{i=1}^{n} r_i^2(S,t_0).
+  \label{eq:lsq}
+\end{equation}
+该问题存在多个局部极小（低空解、高空解、镜像伪解），除线性化初值外，另取若干高空初值（高程1000\,m、5000\,m、12000\,m）分别迭代，从收敛结果中选取残差最小且物理合理（高程为正、$t_0$落在观测时间窗附近）的解。完整流程如算法\ref{alg:q1}所示。
+
+\begin{algorithm}[H]
+\caption{问题一求解流程}\label{alg:q1}
+\begin{algorithmic}[1]
+\Require 设备坐标$P_i$与抵达时刻$t_i$（$i=1,\dots,7$），声速$c$
+\Ensure 音爆位置$S^{*}$、时刻$t_0^{*}$及参与解算的设备集合
+\State 按式\eqref{eq:coord}将经纬高换算为局部直角坐标
+\State 遍历全部$\binom{7}{4}=35$个4台组合：由式\eqref{eq:linear}求初值，多初值非线性精炼式\eqref{eq:lsq}，记录各组合的解与RMS残差
+\State 对比各组合残差量级，筛查异常设备
+\State 以筛查后的5台设备联立解算，按式\eqref{eq:residual}计算全部7台设备的残差，确认异常并剔除
+\State 对保留设备做4台子集投票，检验解的稳健性
+\State \Return 五台联合解$(S^{*},t_0^{*})$
+\end{algorithmic}
+\end{algorithm}
+
+对35个4台组合逐一求解，结果呈现清晰的二分规律：凡包含设备D或F的组合，RMS残差均在1.5\,km至6.5\,km之间，其中个别"零残差"组合的解落在高程$-5.5$万\,m至$-25.8$万\,m的荒谬位置，属伪解，直接排除；而只从$\{\mathrm{A,B,C,E,G}\}$中取台的组合，残差均在几十至几百米，且解落在合理空域。这提示D、F的记录与其余设备不属于同一事件。
+
+以A、B、C、E、G五台联合解为基准，按式\eqref{eq:residual}计算全部7台设备的残差，结果如表\ref{tab:residual}与图\ref{fig:residual}所示。D、F的残差分别达$-19.4$\,km和$-16.2$\,km，折合时间矛盾约57\,s和48\,s，远超任何合理的观测误差，最可能的解释是这两台设备记录到的是其他残骸的音爆或记录故障。据此\textbf{判定D、F为异常数据并剔除}，参与最终解算的为A、B、C、E、G五台。
+
+\begin{table}[H]\centering
+  \caption{五台联合解下各设备的残差}\label{tab:residual}
+  \small
+  \begin{tabular}{cccc}
+    \toprule
+    \textbf{设备} & \textbf{残差(m)} & \textbf{折合时间(s)} & \textbf{判定} \\
+    \midrule
+    A & $+58$ & $+0.17$ & 有效 \\
+    B & $+195$ & $+0.57$ & 有效 \\
+    C & $-642$ & $-1.89$ & 有效 \\
+    D & $-19371$ & $-56.97$ & \textbf{异常，剔除} \\
+    E & $+483$ & $+1.42$ & 有效 \\
+    F & $-16174$ & $-47.57$ & \textbf{异常，剔除} \\
+    G & $-95$ & $-0.28$ & 有效 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.66\textwidth]{fig_residual.pdf}
+  \caption{五台联合解下各设备残差对比}\label{fig:residual}
+\end{figure}
+
+剔除D、F后，A、B、C、E、G五台联合解为：音爆位置\textbf{东经110.4989°、北纬27.3105°、高程855\,m}，音爆时刻为系统时钟后\textbf{19.313\,s}，RMS残差373\,m。为回答"4台是否够用"，表\ref{tab:candidates}列出其中两个4台子集的解作对比。
+
+\begin{table}[H]\centering
+  \caption{4台子集解与五台联合解对比}\label{tab:candidates}
+  \small
+  \begin{tabular}{cccccc}
+    \toprule
+    \textbf{组合} & \textbf{经度(°E)} & \textbf{纬度(°N)} & \textbf{高程(m)} & $t_0$\textbf{(s)} & \textbf{RMS残差(m)} \\
+    \midrule
+    ABCG & 110.5064 & 27.3002 & 1138 & 18.79 & 62 \\
+    ABEG & 110.4978 & 27.3143 & 1154 & 19.09 & 53 \\
+    ABCEG（5台） & 110.4989 & 27.3105 & 855 & 19.31 & 373 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+为量化这些解之间的差异，表\ref{tab:gap}给出两两对比。
+
+\begin{table}[H]\centering
+  \caption{4台子集与五台联合解的两两差距}\label{tab:gap}
+  \small
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{对比} & \textbf{水平距离(m)} & \textbf{高程差(m)} & $t_0$\textbf{差(s)} \\
+    \midrule
+    ABCG $\leftrightarrow$ ABEG & 1778 & 16 & 0.30 \\
+    ABCG $\leftrightarrow$ ABCEG & 1359 & 283 & 0.52 \\
+    ABEG  $\leftrightarrow$ ABCEG & 436  & 299 & 0.22 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+ABCG与ABEG相距1.78\,km，这个量级是否可能由观测噪声引起？为回答该问题，对五台数据施加不同水平的随机扰动后重复求解300次，统计解的自然散布，结果如表\ref{tab:monte}所示。
+
+\begin{table}[H]\centering
+  \caption{蒙特卡洛噪声散布评估（300次重复，95\%半径）}\label{tab:monte}
+  \small
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{噪声来源} & \textbf{水平散布} & \textbf{高程散布} \\
+    \midrule
+    坐标量化$\pm0.0005^\circ$ + 时刻舍入$\pm0.0005$\,s & $\approx87$\,m & $\pm10$\,m \\
+    $\pm0.5$\,s时间误差（问题四最坏假设） & $\approx300$\,m & $\pm37$\,m \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+ABCG与ABEG相距1.78\,km，是噪声级散布的6$\sim$20倍，因此这不是噪声级分歧，而是系统性偏差。具体指向：五台解下C的残差为$-1.89$\,s、E为$+1.42$\,s，方向相反、量级相当——C、E中至少一台存在坐标或钟差系统错误，但现有数据无法判定该剔哪一台（剔C得ABEG，剔E得ABCG，残差几乎同样小）。
+
+既然如此，为什么最终选择5台联合解（ABCEG）而非任一4台组合？原因有四：
+\begin{enumerate}[itemsep=1pt]
+  \item \textbf{4台的小残差是维度决定的假象}。4方程4未知数恰好定解，残差趋零是数学自动保证，不含任何检错能力。ABCG、ABEG、ACEG三个4台组合残差都只有50$\sim$90\,m，却给出互差1.5$\sim$3.5\,km的三个"自洽"答案——4台层面根本无法鉴别。
+  \item \textbf{第5台提供冗余与裁判能力}。5台有1个冗余自由度，残差不再恒为零，而是如实反映数据质量；识别D、F异常靠的正是这个冗余。
+  \item \textbf{对系统偏差的中和作用}。C、E偏差方向相反，5台最小二乘将其折中，解落在两簇候选之间；押注任何单一4台组合都可能把1.5\,km系统误差照单全收。
+  \item \textbf{子集投票佐证}（见下文）。
+\end{enumerate}
+
+为检验上述结论的稳健性，把$\{\mathrm{A,B,C,E,G}\}$的全部5个4台子集解当作5张"选票"，观察其聚散程度，结果如表\ref{tab:vote}与图\ref{fig:vote}所示。其中4票收敛到东经110.499°$\sim$110.506°、北纬27.300°$\sim$27.314°、高程800$\sim$1150\,m这一簇内，五台联合解恰位于簇中心；仅ACEG一票偏离3.5\,km，且$t_0$相差约5\,s，明显离群。多数表决与最小二乘相互印证，说明定位结果是稳健的；离群票同时提示水平方向存在约$\pm1.5$\,km量级的固有不确定度。
+
+\begin{table}[H]\centering
+  \caption{四台子集投票结果}\label{tab:vote}
+  \small
+  \begin{tabular}{cccccc}
+    \toprule
+    \textbf{子集} & \textbf{经度(°E)} & \textbf{纬度(°N)} & \textbf{高程(m)} & $t_0$\textbf{(s)} & \textbf{是否入主簇} \\
+    \midrule
+    ABCE & 110.4986 & 27.3101 & 798 & 19.17 & 是 \\
+    ABCG & 110.5064 & 27.3002 & 1138 & 18.79 & 是 \\
+    ABEG & 110.4978 & 27.3143 & 1154 & 19.09 & 是 \\
+    BCEG & 110.4991 & 27.3108 & 822 & 19.40 & 是 \\
+    ACEG & 110.4658 & 27.3332 & 1097 & 24.15 & 否（偏离3.5\,km） \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.56\textwidth]{fig_subset_vote.pdf}
+  \caption{四台子集解与五台联合解的水平分布}\label{fig:vote}
+\end{figure}
+
+综合以上分析，问题一的结论为：精准确定单个残骸的音爆位置与时刻，\textbf{理论最少需4台监测设备，实际应布置不少于5台}以获得检错与平差冗余；题目7台设备中D、F记录异常予以剔除，由A、B、C、E、G解得音爆位置为\textbf{东经110.499°、北纬27.311°、高程约855\,m}，音爆时刻为系统时钟后\textbf{19.3\,s}；结果的不确定度约为水平$\pm1\sim2$\,km、高程$\pm300$\,m、$t_0$约$\pm0.5$\,s，其中水平不确定度主要由个别台站不可分辨的系统偏差主导。此结论为问题四"误差无法降低时如何压到1\,km以内"提供了切入点：需增加台站冗余、标校台站坐标与钟差。
+
+%================ 7 问题二 =================
+\newpage
+\section{问题二：多残骸震动波的归属判定与设备数量分析}
+
+（本节待问题二方案完成后撰写。拟包含：多残骸情形下TOA观测方程的扩展；基于传播距离相容性与音爆时刻差不超过5\,s约束的归属判定准则；归属判定与定位的联合求解或交替求解策略；4个残骸情形下未知量总数与独立方程数的平衡分析，给出最少设备台数。）
+
+%================ 8 问题三 =================
+\newpage
+\section{问题三：四个残骸音爆位置与时刻的解算}
+
+（本节待问题三方案完成后撰写。拟包含：问题三数据（7台设备各4组抵达时刻）的预处理；应用问题二归属判定模型完成震动波分组；各残骸分别按问题一方法解算位置与时刻；异常数据检验与结果汇总表。）
+
+%================ 9 问题四 =================
+\newpage
+\section{问题四：含随机时间误差的模型修正与布站设计}
+
+（本节待问题四方案完成后撰写。拟包含：0.5\,s随机时间误差下的观测模型修正；对问题三数据叠加随机误差的算例与结果误差分析；误差无法降低时实现1\,km以内定位精度的布站方案设计；模拟数据生成与模型验证。）
+
+%================ 10 模型的分析与检验 =================
+\newpage
+\section{模型的分析与检验}
+\subsection{灵敏度分析}
+
+问题一的解对两类扰动可能敏感：一是观测数据自身的误差（坐标量化与时刻舍入，以及问题四设定的0.5\,s时间误差），二是参与解算的设备组合。后者已在前文以子集投票的形式检验，此处用蒙特卡洛模拟考察前者。
+
+以五台联合解为基准，对设备坐标叠加$\pm0.0005°$的均匀扰动（对应坐标最后一位的量化误差）、对抵达时刻分别叠加$\pm0.0005$\,s（时刻舍入）与$\pm0.5$\,s（问题四的最坏假设）的均匀扰动，各重复解算300次，考察解的散布，结果如表\ref{tab:mc}与图\ref{fig:mc}所示。
+
+\begin{table}[H]\centering
+  \caption{蒙特卡洛噪声扰动下解的散布（300次重复）}\label{tab:mc}
+  \small
+  \begin{tabular}{ccc}
+    \toprule
+    \textbf{噪声来源} & \textbf{水平95\%散布半径} & \textbf{高程标准差} \\
+    \midrule
+    坐标量化$\pm0.0005°$+时刻舍入$\pm0.0005$\,s & 约86\,m & 约10\,m \\
+    $\pm0.5$\,s时间误差（问题四水平） & 约292\,m & 约38\,m \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.56\textwidth]{fig_montecarlo.pdf}
+  \caption{两种噪声水平下定位解的散布}\label{fig:mc}
+\end{figure}
+
+两组结果说明：观测数据的量化级噪声只会引起百米以内的解散布，模型对常规观测噪声是稳健的；即便叠加0.5\,s的随机时间误差，解的水平散布也仅约300\,m。而前文不同4台子集解之间1.78\,km的分歧是噪声散布的6至20倍，不可能由随机噪声解释，只能归因于个别台站的系统性偏差。这从统计上印证了第六部分的判断：问题一定位误差的主导因素是系统偏差而非随机噪声，模型本身对随机扰动稳健，进一步压缩误差须从台站标校与增加冗余入手。
+
+\subsection{模型对比}
+将本文方法与传统TDOA方法对比：TDOA用时刻差消去$t_0$，方程数比设备数少1，同样的台数下冗余更少，且无法直接给出音爆时刻；本文的TOA模型保留$t_0$为未知量，每台设备贡献一个独立方程，冗余度更高，契合异常数据检验的需要。在初值求取环节，本文借用了TDOA的差分思想消去二次项，相当于两种体制的结合。与直接以全部7台数据做最小二乘的朴素做法相比，本文的子集枚举与残差检验避免了D、F异常记录对解的污染——若7台混用，解将被拉向错误位置且难以察觉。
+
+%================ 11 模型的评价、改进与推广 =================
+\section{模型的评价、改进与推广}
+
+（本节待全部问题方案完成后补充。拟包含：模型优点、缺点与改进方向、推广应用的简述。）
+
+\section{AI工具使用说明}
+本文写作过程中使用了AI工具辅助文献检索、代码调试与语言润色；全部模型的构建、求解、结果分析与结论均由参赛队员独立完成，论文内容的原创性由参赛队员负责。
+
+\newpage
+%================ 12 参考文献 =================
+\zihao{5}
+\begin{thebibliography}{99}
+  \bibitem{chan1994} Chan Y T, Ho K C. A simple and efficient estimator for hyperbolic location[J]. IEEE Transactions on Signal Processing, 1994, 42(8): 1905-1915.
+  \bibitem{foy1976} Foy W H. Position-location solutions by Taylor-series estimation[J]. IEEE Transactions on Aerospace and Electronic Systems, 1976, AES-12(2): 187-194.
+  \bibitem{torrieri1984} Torrieri D J. Statistical theory of passive location systems[J]. IEEE Transactions on Aerospace and Electronic Systems, 1984, AES-20(2): 183-198.
+  \bibitem{sun1996} 孙仲康, 周一宇, 何黎星. 单多基地有源无源定位技术[M]. 北京: 国防工业出版社, 1996.
+  \bibitem{fischler1981} Fischler M A, Bolles R C. Random sample consensus: a paradigm for model fitting with applications to image analysis and automated cartography[J]. Communications of the ACM, 1981, 24(6): 381-395.
+  \bibitem{huber1981} Huber P J. Robust Statistics[M]. New York: John Wiley \& Sons, 1981.
+\end{thebibliography}
+
+%================ 附录 =================
+\newpage
+\appendix
+\ctexset{section={name={附录,：}, number=\chinese{section}}}
+\renewcommand{\figurename}{附图}
+\renewcommand{\tablename}{附表}
+\setcounter{figure}{0}
+\setcounter{table}{0}
+\section{数据来源与支撑材料说明}\label{app:data}
+\subsection{数据来源}
+\begin{itemize}[itemsep=1pt]
+  \item \textbf{问题一监测数据}：题目附件给出的7台监测设备（A至G）的三维坐标与音爆抵达时刻，共7组记录，用于问题一的单残骸定位与异常数据检验。
+  \item \textbf{问题三监测数据}：题目附件给出的7台设备各4组音爆抵达时刻，用于问题三的多残骸解算（待使用）。
+\end{itemize}
+\subsection{支撑材料文件列表}
+\begin{itemize}[itemsep=1pt]
+  \item \texttt{q1\_solution.py}：问题一完整求解代码（坐标换算、子集枚举、残差检验、子集投票、蒙特卡洛模拟）
+  \item \texttt{make\_figures.py}：论文插图绘制代码
+  \item 运行环境：Python 3.10+，依赖\texttt{numpy}、\texttt{scipy}、\texttt{matplotlib}
+\end{itemize}
+
+\section{主要代码}\label{app:code}
+
+\subsection{问题一模型求解（\texttt{q1\_solution.py}）}
+\begin{lstlisting}[language=Python, caption=问题一完整求解代码]
+import numpy as np
+from itertools import combinations
+from scipy.optimize import least_squares
+
+# ================= 数据（问题 1） =================
+devs = {
+    'A': (110.241, 27.204, 824, 100.767),
+    'B': (110.780, 27.456, 727, 112.220),
+    'C': (110.712, 27.785, 742, 188.020),
+    'D': (110.251, 27.825, 850, 258.985),
+    'E': (110.524, 27.617, 786, 118.443),
+    'F': (110.467, 27.921, 678, 266.871),
+    'G': (110.047, 27.121, 575, 163.024),
+}
+c = 340.0                        # 声速 m/s
+lon0, lat0 = 110.241, 27.204     # 局部坐标原点（设备 A）
+Klon, Klat = 97.304e3, 111.263e3  # 每度折合米数
+
+# 经纬度 -> 局部东-北-天直角坐标 (m)
+pos = {k: np.array([(v[0]-lon0)*Klon, (v[1]-lat0)*Klat, float(v[2])])
+       for k, v in devs.items()}
+tobs = {k: v[3] for k, v in devs.items()}
+
+# ================= 核心函数 =================
+def residual(v, P, T):
+    """残差 r_i = 几何距离 ||S-P_i|| - 声波距离 c*(t_i-t0)，单位米。
+       v = [x, y, z, t0]；P: n×3 设备坐标；T: n 个到达时刻。"""
+    return np.linalg.norm(P - v[:3], axis=1) - c * (T - v[3])
+
+def solve_toa(keys):
+    """TOA 定位：线性化求初值 + 多初值非线性精炼，返回 (RMS残差, 解向量)"""
+    P = np.array([pos[k] for k in keys])
+    T = np.array([tobs[k] for k in keys])
+    # 第一步：平方后两两相减，得关于 (x,y,z,t0) 的线性方程组
+    A, b = [], []
+    for i in range(1, len(keys)):
+        A.append(np.concatenate([2*(P[i]-P[0]), [-2*c**2*(T[i]-T[0])]]))
+        b.append(P[i] @ P[i] - P[0] @ P[0] - c**2*(T[i]**2 - T[0]**2))
+    X, *_ = np.linalg.lstsq(np.array(A), np.array(b), rcond=None)
+    t0_init = X[3] if np.isfinite(X[3]) else 15.0
+    # 第二步：多初值 LM 精炼，防伪解分支
+    inits = [X[:3]] + [np.array([(110.5-lon0)*Klon, (27.31-lat0)*Klat, z])
+                       for z in (1000.0, 5000.0, 12000.0)]
+    best = None
+    for x0 in inits:
+        r = least_squares(residual, np.concatenate(
+            [x0, [t0_init]]), args=(P, T))
+        rms = np.sqrt(np.mean(r.fun**2))
+        if best is None or rms < best[0]:
+            best = (rms, r.x)
+    return best
+
+def lonlat(v):
+    """局部坐标解 -> (经度, 纬度, 高程, t0)"""
+    return lon0 + v[0]/Klon, lat0 + v[1]/Klat, v[2], v[3]
+
+# ============ 第 1 步：4 台子集枚举，发现异常 ============
+print("== 4 台组合枚举（仅列物理合理解）==")
+for combo in combinations(devs, 4):
+    rms, v = solve_toa(list(combo))
+    lo, la, z, t0 = lonlat(v)
+    if rms < 500 and 0 < z < 20000 and -60 < t0 < 300:
+        print(f"{''.join(combo)}: RMS={rms:6.1f}m  ({lo:.4f},{la:.4f}) "
+              f"z={z:6.0f}m t0={t0:6.2f}s")
+
+# ====== 第 2 步：残差检验，确认 D、F 异常 ======
+rms5, v5 = solve_toa(list('ABCEG'))
+print("\n== ABCEG 五台联合解 ==")
+print("经度 %.5f  纬度 %.5f  高程 %.0f m  t0 %.3f s  RMS %.1f m"
+      % (*lonlat(v5), rms5))
+P_all = np.array([pos[k] for k in devs])
+T_all = np.array([tobs[k] for k in devs])
+for k, r in zip(devs, residual(v5, P_all, T_all)):
+    print(f"  设备{k}: 残差 {r:+9.1f} m ({r/c:+6.2f} s)")
+
+# ============ 第 3 步：子集投票 ============
+print("\n== {A,B,C,E,G} 内 4 台子集投票 ==")
+for combo in combinations('ABCEG', 4):
+    rms, v = solve_toa(list(combo))
+    lo, la, z, t0 = lonlat(v)
+    print(f"{''.join(combo)}: ({lo:.4f},{la:.4f}) z={z:5.0f}m t0={t0:5.2f}s")
+
+# ====== 第 4 步：蒙特卡洛噪声散布评估 ======
+rng = np.random.default_rng(0)
+keys5 = list('ABCEG')
+P5 = np.array([pos[k] for k in keys5])
+T5 = np.array([tobs[k] for k in keys5])
+
+def monte_carlo(coord_noise_deg, time_noise_s, n=300):
+    outs = []
+    for _ in range(n):
+        dP = P5 + rng.uniform(-coord_noise_deg, coord_noise_deg, P5.shape) \
+                 * np.array([Klon, Klat, 0.0])   # 高程视为精确
+        dT = T5 + rng.uniform(-time_noise_s, time_noise_s, T5.shape)
+        r = least_squares(residual, v5.copy(), args=(dP, dT))
+        outs.append(r.x)
+    outs = np.array(outs)
+    dh = np.hypot(outs[:, 0]-v5[0], outs[:, 1]-v5[1])
+    return np.percentile(dh, 95), outs[:, 2].std()
+
+r95a, zsa = monte_carlo(0.0005, 0.0005)   # 坐标量化 + 时刻舍入
+r95b, zsb = monte_carlo(0.0,    0.5)      # ±0.5 s 时间误差（问题4水平）
+print(f"\n坐标量化噪声下解的 95% 散布半径 ≈ {r95a:.0f} m（高程 ±{zsa:.0f} m）")
+print(f"±0.5s 时间噪声下解的 95% 散布半径 ≈ {r95b:.0f} m（高程 ±{zsb:.0f} m）")
+\end{lstlisting}
+
+\end{document}
