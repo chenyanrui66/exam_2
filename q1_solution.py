@@ -30,10 +30,12 @@ def residual(v, P, T):
     return np.linalg.norm(P - v[:3], axis=1) - c * (T - v[3])
 
 
-def solve_toa(keys):
+def solve_toa(keys, P=None, T=None):
     """TOA 定位：线性化求初值 + 多初值非线性精炼，返回 (RMS残差, 解向量)"""
-    P = np.array([pos[k] for k in keys])
-    T = np.array([tobs[k] for k in keys])
+    if P is None:
+        P = np.array([pos[k] for k in keys])
+    if T is None:
+        T = np.array([tobs[k] for k in keys])
     # --- 第一步：平方后两两相减，得关于 (x,y,z,t0) 的线性方程组 ---
     A, b = [], []
     for i in range(1, len(keys)):
@@ -49,6 +51,7 @@ def solve_toa(keys):
         r = least_squares(residual, np.concatenate(
             [x0, [t0_init]]), args=(P, T))
         rms = np.sqrt(np.mean(r.fun**2))
+        # 可选：加上物理合理性筛选（见前文建议）
         if best is None or rms < best[0]:
             best = (rms, r.x)
     return best
@@ -60,7 +63,7 @@ def lonlat(v):
 
 
 # ================= 第 1 步：4 台子集枚举，发现异常 =================
-print("== 4 台组合枚举（仅列物理合理解）==")
+print(" 4 台组合枚举")
 for combo in combinations(devs, 4):
     rms, v = solve_toa(list(combo))
     lo, la, z, t0 = lonlat(v)
@@ -79,7 +82,7 @@ for k, r in zip(devs, residual(v5, P_all, T_all)):
     print(f"  设备{k}: 残差 {r:+9.1f} m ({r/c:+6.2f} s)")
 
 # ================= 第 3 步：子集投票 =================
-print("\n== {A,B,C,E,G} 内 4 台子集投票 ==")
+print("\n {A,B,C,E,G} 内 4 台子集投票 ")
 for combo in combinations('ABCEG', 4):
     rms, v = solve_toa(list(combo))
     lo, la, z, t0 = lonlat(v)
