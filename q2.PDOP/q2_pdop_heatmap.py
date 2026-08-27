@@ -170,7 +170,7 @@ def make_figure(combination: str, figure_number: int,
 
     # 156 mm = 6.142 in；稍留安全余量，满足“宽度不超过版心”。
     fig, ax = plt.subplots(figsize=(6.10, 5.85), dpi=160)
-    fig.subplots_adjust(left=0.16, right=0.85, top=0.93, bottom=0.27)
+    fig.subplots_adjust(left=0.16, right=0.85, top=0.93, bottom=0.2)
 
     contour = ax.contourf(
         lon_grid, lat_grid, pdop,
@@ -220,20 +220,9 @@ def make_figure(combination: str, figure_number: int,
     )
 
     colorbar = fig.colorbar(contour, ax=ax, pad=0.025, fraction=0.052)
-    colorbar.set_label("PDOP（km/s，数值越小越好）", fontsize=10)
+    colorbar.set_label("PDOP（km/s）", fontsize=10)
     colorbar.ax.tick_params(labelsize=9)
 
-    # 图题位置、格式与字体：图下方居中，宋体加粗，无冒号。
-    caption = f"图{figure_number} {caption_description}"
-    caption_artist = fig.text(
-        0.5, 0.055, caption, ha="center", va="center",
-        fontfamily="SimSun", fontsize=14, fontweight="normal",
-    )
-    # 宋体通常没有独立粗体字形，用细描边模拟 Word 的“宋体加粗”视觉效果。
-    caption_artist.set_path_effects([
-        path_effects.Stroke(linewidth=0.25, foreground="black"),
-        path_effects.Normal(),
-    ])
     stem = f"q2_pdop_{len(combination)}stations_{combination}"
     fig.savefig(OUTPUT_DIR / f"{stem}.png", dpi=600,
                 bbox_inches="tight", pad_inches=0.03)

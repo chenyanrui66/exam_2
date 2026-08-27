@@ -33,7 +33,7 @@ READING_NUMBERS = [1, 2, 3, 4]
 
 # Nature Publishing Group 风格配色，并保持既定语义：
 # #1 红、#2 蓝、#3 绿、#4 黄。颜色在白色分隔线和论文打印中保持清晰区分。
-COLORS = ["#E64B35", "#4DBBD5", "#7CB342", "#F6C85F"]
+COLORS = ["#E64B35", "#4DBBD5", "#57CA87", "#F6C85F"]
 
 
 def _font(size: float, bold: bool = False) -> FontProperties:
@@ -60,14 +60,16 @@ def draw_heatmap(output_dir: Path) -> tuple[Path, Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 156 mm = 6.1417 in；略留余量，确保不超过论文约 156 mm 的版心宽度。
-    fig = plt.figure(figsize=(6.10, 6.20), facecolor="white")
-    ax = fig.add_axes([0.12, 0.31, 0.80, 0.62])
+    fig = plt.figure(figsize=(6.10, 5.20), facecolor="white")
+    ax = fig.add_axes([0.12, 0.18, 0.80, 0.8])
 
     cmap = ListedColormap(COLORS)
     norm = BoundaryNorm([0.5, 1.5, 2.5, 3.5, 4.5], cmap.N)
-    ax.imshow(ASSOCIATION, cmap=cmap, norm=norm, aspect="auto", interpolation="none")
+    ax.imshow(ASSOCIATION, cmap=cmap, norm=norm,
+              aspect="auto", interpolation="none")
 
-    ax.set_xticks(np.arange(4), labels=READING_NUMBERS, fontproperties=_font(14))
+    ax.set_xticks(np.arange(4), labels=READING_NUMBERS,
+                  fontproperties=_font(14))
     ax.set_yticks(np.arange(7), labels=DEVICES, fontproperties=_font(14))
     ax.set_xlabel("读数序号（按到达时间排序）", fontproperties=_font(14), labelpad=10)
     ax.set_ylabel("监测设备", fontproperties=_font(14), labelpad=12)
@@ -98,29 +100,20 @@ def draw_heatmap(output_dir: Path) -> tuple[Path, Path]:
             )
 
     legend_handles = [
-        Patch(facecolor=color, edgecolor="#666666", linewidth=0.6, label=f"残骸 #{idx}")
+        Patch(facecolor=color, edgecolor="#666666",
+              linewidth=0.6, label=f"残骸 #{idx}")
         for idx, color in enumerate(COLORS, start=1)
     ]
     ax.legend(
         handles=legend_handles,
         loc="upper center",
-        bbox_to_anchor=(0.5, -0.14),
+        bbox_to_anchor=(0.5, -0.12),
         ncol=4,
         frameon=False,
         prop=_font(14),
         handlelength=1.2,
         handleheight=0.9,
         columnspacing=0.7,
-    )
-
-    # 图题位于图下方，居中，宋体小四（12 pt）加粗；格式为“图X 描述”。
-    fig.text(
-        0.5,
-        0.045,
-        "图2 问题三设备读数与残骸关联矩阵",
-        ha="center",
-        va="center",
-        fontproperties=_font(16, bold=True),
     )
 
     svg_path = output_dir / "图2_问题三设备读数与残骸关联矩阵.svg"

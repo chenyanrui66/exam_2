@@ -33,10 +33,12 @@ def configure_chinese_font():
     for font_path in candidates:
         if font_path.exists():
             font_manager.fontManager.addfont(str(font_path))
-            font_name = font_manager.FontProperties(fname=str(font_path)).get_name()
+            font_name = font_manager.FontProperties(
+                fname=str(font_path)).get_name()
             plt.rcParams["font.family"] = font_name
             return font_name
-    plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimSun", "DejaVu Sans"]
+    plt.rcParams["font.sans-serif"] = ["Microsoft YaHei",
+                                       "SimSun", "DejaVu Sans"]
     return plt.rcParams["font.sans-serif"][0]
 
 
@@ -54,7 +56,7 @@ def make_figure():
         figsize=(FIGURE_WIDTH_MM / 25.4, FIGURE_HEIGHT_MM / 25.4),
         constrained_layout=False,
     )
-    fig.subplots_adjust(left=0.145, right=0.965, top=0.950, bottom=0.190)
+    fig.subplots_adjust(left=0.145, right=0.965, top=0.950, bottom=0.140)
 
     regular = [name for name in SUBSET_SOLUTIONS if name != "ACEG"]
     x_regular = [SUBSET_SOLUTIONS[name][0] for name in regular]
@@ -219,7 +221,7 @@ def make_figure():
                    textcoords="offset points", ha="left", va="bottom", fontsize=10.5)
     inset.annotate("BCEG", SUBSET_SOLUTIONS["BCEG"], xytext=(-4, -5),
                    textcoords="offset points", ha="right", va="top", fontsize=10.5)
-    inset.annotate("联合解", JOINT_SOLUTION, xytext=(18, 0),
+    inset.annotate("联合解", JOINT_SOLUTION, xytext=(10, 0),
                    textcoords="offset points", ha="left", va="center",
                    fontsize=10.5, color="#6B4600")
     inset.set_xlim(110.49848, 110.49938)
@@ -230,26 +232,12 @@ def make_figure():
     inset.xaxis.set_major_formatter(FormatStrFormatter("%.4f"))
     inset.yaxis.set_major_formatter(FormatStrFormatter("%.4f"))
     inset.tick_params(axis="both", labelsize=8.5, length=2.2, pad=1.5)
-    inset.grid(True, linestyle="--", linewidth=0.4, alpha=0.35, color="#94A3B8")
+    inset.grid(True, linestyle="--", linewidth=0.4,
+               alpha=0.35, color="#94A3B8")
     inset.set_title("中心区域局部放大", fontsize=11.5, pad=3.5)
     for spine in inset.spines.values():
         spine.set_color("#64748B")
         spine.set_linewidth(0.65)
-
-    # 题注：图下居中，宋体小四（12 pt）加粗，无冒号。
-    caption = fig.text(
-        0.5,
-        0.060,
-        "图1 问题一四台子集投票与五台联合解（稳健性检验）",
-        ha="center",
-        va="center",
-        fontsize=14,
-        fontweight="normal",
-    )
-    # simsun.ttc 不含独立粗体字形，轻微描边可得到符合论文题注的宋体加粗效果。
-    caption.set_path_effects(
-        [path_effects.withStroke(linewidth=0.32, foreground="black")]
-    )
     return fig
 
 

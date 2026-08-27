@@ -20,7 +20,7 @@ import numpy as np
 
 # ---------------------------- 可调整参数 ----------------------------
 FIGURE_NO = 1  # 插入论文时按全文顺序修改
-CAPTION = f"图{FIGURE_NO} 问题三四个残骸的水平投影与高程剖面"
+
 
 OUTPUT_DIR = Path(__file__).resolve().parent
 OUTPUT_STEM = OUTPUT_DIR / "图1_问题三_水平投影与高程剖面"
@@ -67,7 +67,8 @@ def setup_chinese_font():
             family = font_manager.FontProperties(fname=str(path)).get_name()
             mpl.rcParams["font.sans-serif"] = [family, "DejaVu Sans"]
             return family
-    mpl.rcParams["font.sans-serif"] = ["SimSun", "Noto Sans CJK SC", "DejaVu Sans"]
+    mpl.rcParams["font.sans-serif"] = ["SimSun",
+                                       "Noto Sans CJK SC", "DejaVu Sans"]
     return "SimSun"
 
 
@@ -107,7 +108,7 @@ def make_figure():
     fig = plt.figure(figsize=(FIG_WIDTH, FIG_HEIGHT), facecolor="white")
     gs = fig.add_gridspec(
         1, 2, width_ratios=[1, 1],
-        left=0.085, right=0.985, top=0.90, bottom=0.28, wspace=0.55
+        left=0.085, right=0.985, top=0.90, bottom=0.17, wspace=0.55
     )
     ax_map = fig.add_subplot(gs[0, 0])
     ax_prof = fig.add_subplot(gs[0, 1])
@@ -186,7 +187,7 @@ def make_figure():
                label="东西剖面"),
     ]
     # 放置于两幅子图上方的中缝，避开 B 图纵坐标轴文字与刻度。
-    fig.legend(handles=legend_items, loc="center", bbox_to_anchor=(0.475, 0.73),
+    fig.legend(handles=legend_items, loc="center", bbox_to_anchor=(0.48, 0.78),
                frameon=True, framealpha=0.92, borderpad=0.3,
                handlelength=1.45, labelspacing=0.35, fontsize=9)
 
@@ -219,12 +220,12 @@ def make_figure():
                         edgecolor="white", linewidth=0.7, zorder=5)
         # 数值与编号垂直对齐，数值直接排在编号下方。
         label_style = (
-            dict(xytext=(0, 10), ha="center", va="bottom")
+            dict(xytext=(10, 10), ha="center", va="bottom")
             if event_index == 0
-            else dict(xytext=(-8, 10), ha="right", va="bottom")
+            else dict(xytext=(10, 10), ha="right", va="bottom")
         )
         ax_prof.annotate(
-            f"#{event_index + 1}\n{debris_alt_km[event_index]:.3f}",
+            f"{debris_alt_km[event_index]:.3f}",
             (distance, debris_alt_km[event_index]), textcoords="offset points",
             fontsize=10.5,
             **label_style,
@@ -241,7 +242,7 @@ def make_figure():
         # #3、#4 同样采用“编号在上、数值在下”的对齐方式。
         label_style = dict(xytext=(0, 10), ha="center", va="bottom")
         ax_prof.annotate(
-            f"#{event_index + 1}\n{debris_alt_km[event_index]:.3f}",
+            f"{debris_alt_km[event_index]:.3f}",
             (distance, debris_alt_km[event_index]), textcoords="offset points",
             fontsize=10.5,
             **label_style,
@@ -265,14 +266,6 @@ def make_figure():
             spine.set_linewidth(0.75)
             spine.set_color("#444444")
 
-    caption_artist = fig.text(
-        0.5, 0.055, CAPTION, ha="center", va="center",
-        family=FONT_FAMILY, fontsize=14, fontweight="bold"
-    )
-    # Windows 宋体通常只有常规字形；轻微描边模拟论文中的“宋体加粗”。
-    caption_artist.set_path_effects([
-        patheffects.withStroke(linewidth=0.28, foreground="black")
-    ])
     return fig
 
 

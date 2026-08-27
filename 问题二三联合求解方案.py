@@ -12,7 +12,9 @@
 """
 import itertools
 import json
+import os
 import numpy as np
+import pandas as pd
 
 C = 340.0  # 声速，m/s
 NAMES = np.array(list('ABCDEFG'))
@@ -37,6 +39,26 @@ S = np.column_stack(((lon - 110) * 97304, (lat - 27) * 111263, alt))
 ALL = np.arange(7)
 LOW = np.array([-50000., -50000., 0., -400.])
 HIGH_BASE = np.array([150000., 220000., 120000., 0.])
+
+
+class CsvCollector:
+    """将多个结果表分节写入单个CSV。"""
+
+    def __init__(self):
+        self._blocks = []
+
+    def add(self, section, df, index=False):
+        self._blocks.append((section, df, bool(index)))
+        return df
+
+    def save(self, path, encoding='utf-8-sig'):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'w', encoding=encoding, newline='') as f:
+            for i, (section, df, index) in enumerate(self._blocks):
+                if i:
+                    f.write('\n')
+                f.write(f'#  {section} \n')
+                df.to_csv(f, index=index)
 
 
 def choose_seed_stations():
@@ -180,33 +202,19 @@ def pdop_analysis(theta, ids):
 
 def solve():
     """主求解流程。"""
-    print("=" * 70)
-    print("问题二/三：多残骸音爆定位联合求解")
-    print("=" * 70)
+    collector = CsvCollector()
+    seed_name = "".join(NAMES[SEED])
 
     # 步骤1：生成单事件候选
     cand, roots = candidate_events()
-    seed_name = "".join(NAMES[SEED])
-    print()
-    print(f"解析种子站: {seed_name} (条件数={SEED_COND:.1f})")
-    print(f"枚举空间: 4^7 = {4**7}")
-    print(f"物理边界内解析根: {roots}")
-    print(f"全站TOA候选(精化后): {len(cand)}")
 
     # 步骤2：精确覆盖
     best, ncover = exact_cover(cand)
-    print(f"精确覆盖组合数: {ncover}")
-    print(f"最优联合残差平方和: {best[0]:.6e}")
 
     if best is None:
         raise RuntimeError("没有精确覆盖；可提高阈值检查。")
 
-    # 步骤3：输出结果与残差诊断
-    print()
-    print("-" * 70)
-    print("最终解（按音爆时刻排序）")
-    print("-" * 70)
-
+    # 步骤3：收集结果
     out = []
     for j, x in enumerate(sorted(best[1], key=lambda q: q["theta"][3]), 1):
         th = x["theta"]
@@ -216,7 +224,6 @@ def solve():
         tau = th[3]
         rmse = x["rmse"]
 
-        # 逐站残差（ms）
         obs = T[ALL, x["choice"]]
         residuals = (obs - tau - np.linalg.norm(S - th[:3], axis=1) / C) * 1000
         maxabs = x["maxabs"]
@@ -225,43 +232,41 @@ def solve():
         for i in ALL:
             choice_parts.append(f"{NAMES[i]}第{x['choice'][i]+1}")
         choice_str = ", ".join(choice_parts)
-        print()
-        print(f"残骸{j}: {choice_str}")
-        print(
-            f"  经度={lon_deg:.6f}°, 纬度={lat_deg:.6f}°, 高程={z_km:.3f}km, 音爆时刻={tau:.4f}s")
-        print(f"  RMSE={rmse:.6f}s, max|残差|={maxabs:.6f}s")
-        res_parts = []
-        for i in ALL:
-            res_parts.append(f"{NAMES[i]}={residuals[i]:+.2f}")
-        res_str = ", ".join(res_parts)
-        print(f"  逐站残差(ms): {res_str}")
 
         out.append({
-            "id": j,
-            "choice": x["choice"].tolist(),
-            "lon": lon_deg,
-            "lat": lat_deg,
-            "z_km": z_km,
-            "tau": tau,
-            "rmse": rmse,
-            "maxabs": maxabs,
-            "residuals_ms": residuals.tolist()
+            "残骸编号": j,
+            "读数分配": choice_str,
+            "经度(°)": lon_deg,
+            "纬度(°)": lat_deg,
+            "高程(km)": z_km,
+            "音爆时刻(s)": tau,
+            "RMSE(s)": rmse,
+            "最大残差(s)": maxabs,
+            "A残差(ms)": residuals[0],
+            "B残差(ms)": residuals[1],
+            "C残差(ms)": residuals[2],
+            "D残差(ms)": residuals[3],
+            "E残差(ms)": residuals[4],
+            "F残差(ms)": residuals[5],
+            "G残差(ms)": residuals[6],
         })
+
+    df_results = pd.DataFrame(out)
+    collector.add("残骸定位结果", df_results)
 
     # 步骤4：5秒限制验证
     taus = sorted([x["theta"][3] for x in best[1]])
     span = max(taus) - min(taus)
     status = "通过" if span <= 5 else "未通过"
-    print()
-    print("=" * 70)
-    print(f"5秒时间窗验证: 跨度={span:.4f}s ({span*1000:.1f}ms) <= 5s: {status}")
+
+    df_verify = pd.DataFrame([{
+        "音爆时刻跨度(s)": span,
+        "5秒限制验证": status,
+    }])
+    collector.add("5秒时间窗验证", df_verify)
 
     # 步骤5：PDOP分析
-    print()
-    print("=" * 70)
-    print("PDOP分析（最坏值取4个残骸中的最大）")
-    print("=" * 70)
-
+    pdop_rows = []
     from itertools import combinations
     for combo in ["ABEF", "ABDEF", "ABCDEF", "ABCDEFG", "ABCG", "ABEG", "ABCEG"]:
         ids = np.array([list("ABCDEFG").index(c) for c in combo])
@@ -271,9 +276,20 @@ def solve():
             pdops.append(pdop)
         worst = max(pdops)
         avg = np.mean(pdops)
-        print(f"  {combo}: 最坏PDOP={worst:.3f} km/s, 平均PDOP={avg:.3f} km/s")
+        pdop_rows.append({
+            "设备组合": combo,
+            "最坏PDOP(km/s)": worst,
+            "平均PDOP(km/s)": avg,
+        })
 
-    # 保存JSON
+    df_pdop = pd.DataFrame(pdop_rows)
+    collector.add("PDOP分析", df_pdop)
+
+    # 保存CSV
+    output_path = "./output/result.csv"
+    collector.save(output_path)
+
+    # 同时保留JSON
     result = {
         "seed_stations": seed_name,
         "seed_cond": SEED_COND,
@@ -283,10 +299,11 @@ def solve():
         "time_span_s": span,
         "answer": out
     }
-    with open("result.json", "w", encoding="utf-8") as f:
+    os.makedirs("./output", exist_ok=True)
+    with open("./output/result.json", "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-    print()
-    print("结果已保存至 result.json")
+
+    print("结果已保存")
 
 
 if __name__ == "__main__":
