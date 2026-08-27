@@ -26,10 +26,10 @@ def setup_chinese_font():
 
 
 # ---------- 全局样式 ----------
-BASE_SIZE = 14
+BASE_SIZE = 17
 COLORS = {
-    'bg': '#FAFAFA', 'bg_panel': '#F5F5F0', 'grid': '#E8E8E0',
-    'text': '#2C3E50', 'text_light': '#7F8C8D',
+    'bg': '#FFFFFF', 'bg_panel': '#F5F5F0', 'grid': '#E8E8E0',
+    'text': '#000000', 'text_light': '#7F8C8D',
     'accent': '#E07A5F', 'accent2': '#3D9970',
     'sphere1': '#81B29A', 'sphere2': '#6B8E9F', 'sphere3': '#D4A373', 'sphere4': '#C9ADA7',
     'device': '#264653', 'solution': '#E07A5F', 'line_light': '#BDC3C7',

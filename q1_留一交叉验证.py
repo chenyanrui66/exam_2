@@ -248,7 +248,7 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     fig = make_figure()
     fig.savefig(
-        output_dir / "q1_子集投票散点图.png",
+        output_dir / "q1_留一交叉验证散点图.png",
         format="png",
         dpi=600,
         facecolor="white",
