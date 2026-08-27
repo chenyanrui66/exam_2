@@ -70,9 +70,9 @@ ax1.plot(*S1, 'o', markersize=11,
 ax1.plot(*S2, 'o', markersize=11,
          color=COLORS['device'], markeredgecolor='white', markeredgewidth=2, zorder=5)
 ax1.annotate('$S_1$', xy=S1, xytext=(
-    S1[0]-0.6, S1[1]-0.5), fontsize=BASE_SIZE-0.5, color=COLORS['device'], fontweight='bold')
+    S1[0]-0.6, S1[1]-0.5), fontsize=BASE_SIZE-0.5, color=COLORS['device'], fontweight=400)
 ax1.annotate('$S_2$', xy=S2, xytext=(
-    S2[0]+0.3, S2[1]-0.5), fontsize=BASE_SIZE-0.5, color=COLORS['device'], fontweight='bold')
+    S2[0]+0.3, S2[1]-0.5), fontsize=BASE_SIZE-0.5, color=COLORS['device'], fontweight=400)
 
 d = np.linalg.norm(S2 - S1)
 a = (r1**2 - r2**2 + d**2) / (2 * d)
@@ -87,12 +87,12 @@ ax1.plot(*P_true, '*', markersize=16,
 
 mid = (i1 + i2) / 2
 ax1.annotate('根平面交线\n（两球面交集）', xy=mid, xytext=(mid[0]+1.5, mid[1]+1.2),
-             fontsize=BASE_SIZE-1.5, color=COLORS['accent2'], fontweight='bold', ha='left', va='bottom',
+             fontsize=BASE_SIZE-1.5, color=COLORS['accent2'], fontweight=400, ha='left', va='bottom',
              arrowprops=dict(arrowstyle='->', color=COLORS['accent2'], lw=1.5),
              bbox=dict(boxstyle='round,pad=0.3', facecolor='#E8F5E9', edgecolor=COLORS['accent2'], alpha=0.9, linewidth=1))
 
 ax1.set_title('(a) 两球面相交 → 根平面（圆）', fontsize=BASE_SIZE,
-              fontweight='bold', pad=10, color=COLORS['text'])
+              fontweight=400, pad=10, color=COLORS['text'])
 ax1.set_xlim(-2, 7.5)
 ax1.set_ylim(-1.5, 6)
 ax1.set_aspect('equal')
@@ -146,12 +146,12 @@ ax2.plot([*(P23 + h23 * perp23)], [*(P23 - h23 * perp23)], '-',
 ax2.plot(*P_true, '*', markersize=18,
          color=COLORS['solution'], markeredgecolor='white', markeredgewidth=2, zorder=6)
 ax2.annotate('三个根平面\n交于一条直线', xy=P_true, xytext=(P_true[0]+1.8, P_true[1]+1.5),
-             fontsize=BASE_SIZE-1.5, color=COLORS['accent'], fontweight='bold', ha='left', va='bottom',
+             fontsize=BASE_SIZE-1.5, color=COLORS['accent'], fontweight=400, ha='left', va='bottom',
              arrowprops=dict(arrowstyle='->', color=COLORS['accent'], lw=1.5),
              bbox=dict(boxstyle='round,pad=0.3', facecolor='#FFF3E0', edgecolor=COLORS['accent'], alpha=0.9, linewidth=1))
 
 ax2.set_title('(b) 三个根平面 → 交汇直线', fontsize=BASE_SIZE,
-              fontweight='bold', pad=10, color=COLORS['text'])
+              fontweight=400, pad=10, color=COLORS['text'])
 ax2.set_xlim(-2, 7.5)
 ax2.set_ylim(-1.5, 6)
 ax2.set_aspect('equal')
@@ -170,8 +170,8 @@ ax2.text(0.5, -0.20,
 
 
 fig.suptitle('四站差分法几何分解',
-             fontsize=BASE_SIZE + 2, fontweight='bold', y=0.95, color=COLORS['text'])
+             fontsize=BASE_SIZE + 2, fontweight=400, y=0.95, color=COLORS['text'])
 
 plt.tight_layout()
-plt.savefig('fig2_radical_plane.png',
+plt.savefig('./output/figs/四站差分几何分解.png',
             bbox_inches='tight', facecolor=COLORS['bg'])

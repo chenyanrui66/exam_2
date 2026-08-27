@@ -70,19 +70,19 @@ for i, (name, pos) in enumerate(devices.items()):
     angle = np.arctan2(source[1] - pos[1], source[0] - pos[0])
     mid_r = pos + 0.55 * r * np.array([np.cos(angle), np.sin(angle)])
     ax.annotate(f'$r_{name}=c(t_{name}-t_0)$', xy=mid_r, fontsize=BASE_SIZE-3,
-                color=color, fontweight='bold', ha='center', va='center',
+                color=color, fontweight=400, ha='center', va='center',
                 bbox=dict(boxstyle='round,pad=0.25', facecolor='white', edgecolor=color, alpha=0.9, linewidth=0.8))
 
 for name, pos in devices.items():
     ax.plot(pos[0], pos[1], 'o', markersize=13, color=COLORS['device'],
             markeredgecolor='white', markeredgewidth=2.5, zorder=5)
     ax.annotate(f'$S_{name}$', xy=pos, xytext=(pos[0]+0.45, pos[1]+0.45),
-                fontsize=BASE_SIZE-0.5, fontweight='bold', color=COLORS['device'], ha='left', va='bottom')
+                fontsize=BASE_SIZE-0.5, fontweight=400, color=COLORS['device'], ha='left', va='bottom')
 
 ax.plot(source[0], source[1], '*', markersize=22, color=COLORS['solution'],
         markeredgecolor='white', markeredgewidth=2.5, zorder=6)
 ax.annotate('音爆点 $P(x,y,z)$\\n（球面交汇）', xy=source, xytext=(source[0]+1.5, source[1]+1.8),
-            fontsize=BASE_SIZE-0.5, fontweight='bold', color=COLORS['solution'], ha='left', va='bottom',
+            fontsize=BASE_SIZE-0.5, fontweight=400, color=COLORS['solution'], ha='left', va='bottom',
             arrowprops=dict(arrowstyle='->', color=COLORS['solution'], lw=1.8),
             bbox=dict(boxstyle='round,pad=0.35', facecolor='#FFF5F2', edgecolor=COLORS['solution'], alpha=0.95, linewidth=1.2))
 
@@ -105,7 +105,7 @@ ax.legend(handles=legend_elements, loc='upper left', frameon=True, facecolor='wh
           edgecolor=COLORS['grid'], fancybox=True)
 
 ax.set_title('图1  球面交汇定位原理（TOA截面示意）', fontsize=BASE_SIZE + 2,
-             fontweight='bold', pad=18, color=COLORS['text'])
+             fontweight=400, pad=18, color=COLORS['text'])
 
 
 props = dict(boxstyle='round,pad=0.6', facecolor='white',
@@ -122,5 +122,5 @@ ax.spines['top'].set_visible(False)
 ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
-plt.savefig('fig1_sphere_intersection.png',
+plt.savefig('./output/figs/球面交汇定位原理.png',
             bbox_inches='tight', facecolor=COLORS['bg'])

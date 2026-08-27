@@ -1,6 +1,11 @@
+# -*- coding: utf-8 -*-
+import os
 import numpy as np
+import pandas as pd
 from itertools import combinations
 from scipy.optimize import least_squares
+
+from csv_writer import CsvCollector
 
 # ============================================================================
 # 数据定义：7台监测设备的 (经度°E, 纬度°N, 高程m, 到达时刻s)
@@ -106,22 +111,16 @@ def lonlat(v):
     return lon0 + v[0]/Klon, lat0 + v[1]/Klat, v[2], v[3]
 
 
-def print_solution(name, rms, v):
-    """格式化打印一个解的结果。"""
-    lo, la, z, t0 = lonlat(v)
-    print(f"{name}: 经度 {lo:.5f}°E, 纬度 {la:.5f}°N, "
-          f"高程 {z:.0f} m, t0={t0:.3f} s, RMS={rms:.1f} m")
-
-
-def print_residual_table(title, v_sol, P_all, T_all, dev_list, highlight_set):
-    """打印回测残差表，高亮标记参与拟合的设备。"""
+def residual_table(v_sol, P_all, T_all, dev_list, highlight_set):
+    """
+    生成回测残差表（DataFrame），标记参与拟合的设备并给出评判。
+    返回: (DataFrame, 残差数组)
+    """
     res = residual(v_sol, P_all, T_all)
-    print(f"\n【{title}】")
-    print(f"{'设备':>4} | {'参与拟合':>8} | {'残差(m)':>10} | {'折合(s)':>8} | {'评判':>10}")
-    print("-" * 55)
+    rows = []
     for i, k in enumerate(dev_list):
-        in_fit = "✓ 是" if k in highlight_set else "✗ 否"
-        if k in highlight_set:
+        in_fit = k in highlight_set
+        if in_fit:
             judge = "自洽"
         elif abs(res[i]) > 10000:
             judge = "异常剔除"
@@ -129,9 +128,14 @@ def print_residual_table(title, v_sol, P_all, T_all, dev_list, highlight_set):
             judge = "可疑"
         else:
             judge = "一般"
-        print(
-            f"  {k}  | {in_fit:>8} | {res[i]:+10.0f} | {res[i]/c:+8.2f} | {judge:>10}")
-    return res
+        rows.append({
+            '设备': k,
+            '参与拟合': '是' if in_fit else '否',
+            '残差(m)': round(res[i], 0),
+            '折合(s)': round(res[i]/c, 2),
+            '评判': judge,
+        })
+    return pd.DataFrame(rows), res
 
 
 # ============================================================================
@@ -139,128 +143,123 @@ def print_residual_table(title, v_sol, P_all, T_all, dev_list, highlight_set):
 # ============================================================================
 
 def main():
+    cc = CsvCollector()
+
     dev_list = list(devs.keys())
     P_all = np.array([pos[k] for k in dev_list])
     T_all = np.array([tobs[k] for k in dev_list])
 
-    print("=" * 75)
-    print("问题1 补充分析：4台解的不唯一性与5台裁定的必要性")
-    print("=" * 75)
-
     # ------------------------------------------------------------------------
     # 阶段一：求解三个关键组合
     # ------------------------------------------------------------------------
-    print("\n【阶段一】求解三个关键组合")
-    print("-" * 75)
-
     rms_abcg, v_abcg = solve_toa(list('ABCG'))
-    print_solution("ABCG 四台解", rms_abcg, v_abcg)
-
     rms_abeg, v_abeg = solve_toa(list('ABEG'))
-    print_solution("ABEG 四台解", rms_abeg, v_abeg)
-
     rms_5, v_5 = solve_toa(list('ABCEG'))
-    print_solution("ABCEG 五台联合解", rms_5, v_5)
+
+    sol_rows = []
+    for name, rms, v in [
+        ("ABCG 四台解", rms_abcg, v_abcg),
+        ("ABEG 四台解", rms_abeg, v_abeg),
+        ("ABCEG 五台联合解", rms_5, v_5),
+    ]:
+        lo, la, z, t0 = lonlat(v)
+        sol_rows.append({
+            '组合': name,
+            '经度(°E)': round(lo, 5),
+            '纬度(°N)': round(la, 5),
+            '高程(m)': round(z, 0),
+            't0(s)': round(t0, 3),
+            'RMS(m)': round(rms, 1),
+        })
+    cc.add("阶段一：三个关键组合的解", pd.DataFrame(sol_rows))
 
     # ------------------------------------------------------------------------
     # 阶段二：回测残差对比——核心论证
     # ------------------------------------------------------------------------
-    print("\n【阶段二】回测残差对比——4台解的'自洽'与'互斥'")
-    print("=" * 75)
+    df_abcg, res_abcg = residual_table(v_abcg, P_all, T_all, dev_list, 'ABCG')
+    cc.add("阶段二：ABCG 四台解回测全部7台", df_abcg)
 
-    res_abcg = print_residual_table(
-        "ABCG 四台解回测全部7台", v_abcg, P_all, T_all, dev_list, 'ABCG')
-    res_abeg = print_residual_table(
-        "ABEG 四台解回测全部7台", v_abeg, P_all, T_all, dev_list, 'ABEG')
-    res_5 = print_residual_table(
-        "ABCEG 五台联合解回测全部7台", v_5, P_all, T_all, dev_list, 'ABCEG')
+    df_abeg, res_abeg = residual_table(v_abeg, P_all, T_all, dev_list, 'ABEG')
+    cc.add("阶段二：ABEG 四台解回测全部7台", df_abeg)
+
+    df_5, res_5 = residual_table(v_5, P_all, T_all, dev_list, 'ABCEG')
+    cc.add("阶段二：ABCEG 五台联合解回测全部7台", df_5)
 
     # ------------------------------------------------------------------------
     # 阶段三：关键对比指标
     # ------------------------------------------------------------------------
-    print("\n【阶段三】关键对比指标")
-    print("=" * 75)
-
-    # 两解间距
     d_xy = np.hypot(v_abcg[0]-v_abeg[0], v_abcg[1]-v_abeg[1])
     d_z = abs(v_abcg[2] - v_abeg[2])
     d_t = abs(v_abcg[3] - v_abeg[3])
-    print(f"\n1. ABCG 与 ABEG 两解间距:")
-    print(f"   水平距离: {d_xy:.0f} m, 高程差: {d_z:.0f} m, t0 差: {d_t:.2f} s")
-    print(f"   → 两解相距 1.78 km，远超任何合理噪声级，说明4台解不唯一。")
 
-    # 互相回测
-    print(f"\n2. 两4台解互相回测对方'未参与'设备:")
-    print(
-        f"   ABCG解回测E (ABEG核心成员): {res_abcg[4]:+.0f} m ({res_abcg[4]/c:+.2f} s)")
-    print(
-        f"   ABEG解回测C (ABCG核心成员): {res_abeg[2]:+.0f} m ({res_abeg[2]/c:+.2f} s)")
-    print(f"   → 互相把对方核心设备打成'异常'，但C、E不可能同时异常。")
-    print(f"   → 4台没有冗余自由度，无法判断是C错了还是E错了。")
-
-    # 5台裁定
-    print(f"\n3. 五台联合解如何'裁定':")
-    print(f"   C残差 = {res_5[2]:+.0f} m ({res_5[2]/c:+.2f} s)")
-    print(f"   E残差 = {res_5[4]:+.0f} m ({res_5[4]/c:+.2f} s)")
-    print(f"   → C偏早 1.89 s，E偏晚 1.42 s，方向相反、量级对称。")
-    print(f"   → 最小二乘将两者偏差折中，解落在两簇之间，不偏袒任何一方。")
-
-    # 统计视角
     abcg_in = [res_abcg[i] for i, k in enumerate(dev_list) if k in 'ABCG']
     abeg_in = [res_abeg[i] for i, k in enumerate(dev_list) if k in 'ABEG']
     abceg_in = [res_5[i] for i, k in enumerate(dev_list) if k in 'ABCEG']
-    print(f"\n4. 统计视角——内部自洽 vs 外部回测:")
-    print(f"   ABCG参与设备内部RMS = {np.sqrt(np.mean(np.array(abcg_in)**2)):.1f} m")
-    print(f"   ABEG参与设备内部RMS = {np.sqrt(np.mean(np.array(abeg_in)**2)):.1f} m")
-    print(
-        f"   ABCEG参与设备内部RMS = {np.sqrt(np.mean(np.array(abceg_in)**2)):.1f} m")
-    print(f"   → 4台内部RMS≈60m，是数学必然（4方程4未知数，残差趋零）；")
-    print(f"   → 5台内部RMS≈370m，才是真实数据质量（冗余自由度暴露偏差）。")
-
     normal_idx = [i for i, k in enumerate(dev_list) if k in 'ABCEG']
-    print(f"\n5. 回测正常设备子集 {{A,B,C,E,G}} 的RMS:")
-    print(
-        f"   ABCG解回测5正常设备RMS = {np.sqrt(np.mean(res_abcg[normal_idx]**2)):.1f} m")
-    print(
-        f"   ABEG解回测5正常设备RMS = {np.sqrt(np.mean(res_abeg[normal_idx]**2)):.1f} m")
-    print(
-        f"   ABCEG解回测5正常设备RMS = {np.sqrt(np.mean(res_5[normal_idx]**2)):.1f} m")
-    print(f"   → 4台解回测正常设备RMS≈500-600m，远大于其内部60m；")
-    print(f"   → 5台解回测正常设备RMS≈370m，内外一致，说明模型与数据匹配。")
+
+    metrics = pd.DataFrame([
+        {'类别': '两解间距', '指标': '水平距离(m)', '数值': round(d_xy, 0),
+         '说明': '两解相距约1.78km，远超任何合理噪声级，说明4台解不唯一'},
+        {'类别': '两解间距', '指标': '高程差(m)', '数值': round(d_z, 0), '说明': ''},
+        {'类别': '两解间距', '指标': 't0差(s)', '数值': round(d_t, 2), '说明': ''},
+        {'类别': '互相回测', '指标': 'ABCG解回测E(m)', '数值': round(res_abcg[4], 0),
+         '说明': '互相把对方核心设备打成异常，但C、E不可能同时异常；4台没有冗余自由度无法判断谁错'},
+        {'类别': '互相回测', '指标': 'ABCG解回测E(折合s)', '数值': round(
+            res_abcg[4]/c, 2), '说明': ''},
+        {'类别': '互相回测', '指标': 'ABEG解回测C(m)', '数值': round(
+            res_abeg[2], 0), '说明': ''},
+        {'类别': '互相回测', '指标': 'ABEG解回测C(折合s)', '数值': round(
+            res_abeg[2]/c, 2), '说明': ''},
+        {'类别': '五台裁定', '指标': 'C残差(m)', '数值': round(res_5[2], 0),
+         '说明': 'C偏早1.89s，E偏晚1.42s，方向相反、量级对称；最小二乘折中，解落在两簇之间'},
+        {'类别': '五台裁定', '指标': 'C残差(折合s)', '数值': round(res_5[2]/c, 2), '说明': ''},
+        {'类别': '五台裁定', '指标': 'E残差(m)', '数值': round(res_5[4], 0), '说明': ''},
+        {'类别': '五台裁定', '指标': 'E残差(折合s)', '数值': round(res_5[4]/c, 2), '说明': ''},
+        {'类别': '内部RMS', '指标': 'ABCG参与设备(m)', '数值': round(np.sqrt(np.mean(np.array(abcg_in)**2)), 1),
+         '说明': '4台内部RMS≈60m是数学必然（4方程4未知数，残差趋零）'},
+        {'类别': '内部RMS', '指标': 'ABEG参与设备(m)', '数值': round(
+            np.sqrt(np.mean(np.array(abeg_in)**2)), 1), '说明': ''},
+        {'类别': '内部RMS', '指标': 'ABCEG参与设备(m)', '数值': round(np.sqrt(np.mean(np.array(abceg_in)**2)), 1),
+         '说明': '5台内部RMS≈370m才是真实数据质量（冗余自由度暴露偏差）'},
+        {'类别': '回测正常设备RMS', '指标': 'ABCG解回测5正常设备(m)', '数值': round(np.sqrt(np.mean(res_abcg[normal_idx]**2)), 1),
+         '说明': '4台解回测正常设备RMS≈500-600m，远大于其内部60m'},
+        {'类别': '回测正常设备RMS', '指标': 'ABEG解回测5正常设备(m)', '数值': round(
+            np.sqrt(np.mean(res_abeg[normal_idx]**2)), 1), '说明': ''},
+        {'类别': '回测正常设备RMS', '指标': 'ABCEG解回测5正常设备(m)', '数值': round(np.sqrt(np.mean(res_5[normal_idx]**2)), 1),
+         '说明': '5台解回测正常设备RMS≈370m，内外一致，说明模型与数据匹配'},
+    ])
+    cc.add("阶段三：关键对比指标", metrics)
 
     # ------------------------------------------------------------------------
     # 阶段四：子集投票（稳健性检验）
     # ------------------------------------------------------------------------
-    print("\n【阶段四】{A,B,C,E,G} 内全部4台子集投票")
-    print("=" * 75)
-    print(f"{'子集':>6} | {'经度°E':>10} | {'纬度°N':>10} | {'高程m':>8} | {'t0(s)':>8} | {'RMS(m)':>8}")
-    print("-" * 75)
-
     votes = []
     for combo in combinations('ABCEG', 4):
         keys = list(combo)
         rms, v = solve_toa(keys)
         lo, la, z, t0 = lonlat(v)
         votes.append((combo, lo, la, z, t0, rms))
-        print(
-            f"  {''.join(combo):>4} | {lo:>10.4f} | {la:>10.4f} | {z:>8.0f} | {t0:>8.2f} | {rms:>8.1f}")
 
-    # 统计投票聚类
-    lons = np.array([v[1] for v in votes])
-    lats = np.array([v[2] for v in votes])
-    # 以五台联合解为参考，计算各票偏离
     ref_lo, ref_la = lonlat(v_5)[:2]
-    dists = np.hypot((lons - ref_lo)*Klon, (lats - ref_la)*Klat)
-    in_cluster = dists < 2000  # 2km内视为同一簇
-    print(f"\n   4/5 票收敛到主簇（距五台联合解 < 2km），1票(ACEG)偏离 3.5km。")
-    print(f"   多数表决与最小二乘相互印证，定位结果稳健。")
+    vote_rows = []
+    for combo, lo, la, z, t0, rms in votes:
+        dist = np.hypot((lo-ref_lo)*Klon, (la-ref_la)*Klat)
+        vote_rows.append({
+            '子集': ''.join(combo),
+            '经度(°E)': round(lo, 4),
+            '纬度(°N)': round(la, 4),
+            '高程(m)': round(z, 0),
+            't0(s)': round(t0, 2),
+            'RMS(m)': round(rms, 1),
+            '距五台联合解(m)': round(dist, 0),
+            '是否主簇': '是' if dist < 2000 else '否',
+        })
+    cc.add("阶段四：{A,B,C,E,G} 内全部4台子集投票", pd.DataFrame(vote_rows),
+           index=False)
 
     # ------------------------------------------------------------------------
     # 阶段五：蒙特卡洛噪声散布评估
     # ------------------------------------------------------------------------
-    print("\n【阶段五】蒙特卡洛噪声散布评估")
-    print("=" * 75)
-
     rng = np.random.default_rng(42)
     keys5 = list('ABCEG')
     P5 = np.array([pos[k] for k in keys5])
@@ -282,24 +281,41 @@ def main():
 
     r95a, zsa = monte_carlo(0.0005, 0.0005)   # 坐标量化 + 时刻舍入
     r95b, zsb = monte_carlo(0.0, 0.5)          # ±0.5s 时间误差
-    print(f"\n   坐标量化噪声(±0.0005°) + 时刻舍入(±0.0005s):")
-    print(f"      95%散布半径 ≈ {r95a:.0f} m，高程标准差 ≈ {zsa:.0f} m")
-    print(f"   ±0.5s 时间误差（最坏假设）:")
-    print(f"      95%散布半径 ≈ {r95b:.0f} m，高程标准差 ≈ {zsb:.0f} m")
-    print(f"\n   两4台解相距 1780 m，是噪声散布的 6~20 倍，确认不是噪声级分歧。")
+
+    mc = pd.DataFrame([
+        {'噪声假设': '坐标量化噪声(±0.0005°) + 时刻舍入(±0.0005s)',
+         '95%散布半径(m)': round(r95a, 0), '高程标准差(m)': round(zsa, 0),
+         '说明': ''},
+        {'噪声假设': '±0.5s 时间误差（最坏假设）',
+         '95%散布半径(m)': round(r95b, 0), '高程标准差(m)': round(zsb, 0),
+         '说明': ''},
+        {'噪声假设': '结论',
+         '95%散布半径(m)': '', '高程标准差(m)': '',
+         '说明': '两4台解相距1780m，是噪声散布的6~20倍，确认不是噪声级分歧'},
+    ])
+    cc.add("阶段五：蒙特卡洛噪声散布评估", mc)
 
     # ------------------------------------------------------------------------
     # 最终结论
     # ------------------------------------------------------------------------
-    print("\n" + "=" * 75)
-    print("最终结论")
-    print("=" * 75)
     lo, la, z, t0 = lonlat(v_5)
-    print(f"\n   音爆位置: 东经 {lo:.3f}°, 北纬 {la:.3f}°, 高程约 {z:.0f} m")
-    print(f"   音爆时刻: 系统时钟后 {t0:.1f} s")
-    print(f"   使用设备: A, B, C, E, G（剔除异常设备 D, F）")
-    print(f"\n   核心方法论: 4台理论可解但无冗余检错能力；")
-    print(f"              实际需 ≥5 台，用冗余观测做异常剔除与系统偏差折中。")
+    conclusion = pd.DataFrame([
+        {'项目': '音爆位置', '结果': f'东经 {lo:.3f}°, 北纬 {la:.3f}°, 高程约 {z:.0f} m'},
+        {'项目': '音爆时刻', '结果': f'系统时钟后 {t0:.1f} s'},
+        {'项目': '使用设备', '结果': 'A, B, C, E, G（剔除异常设备 D, F）'},
+        {'项目': '核心方法论', '结果': '4台理论可解但无冗余检错能力；实际需 ≥5 台，用冗余观测做异常剔除与系统偏差折中'},
+    ])
+    cc.add("最终结论", conclusion)
+
+    # ------------------------------------------------------------------------
+    # 保存结果
+    # ------------------------------------------------------------------------
+    out_dir = os.path.join('.', 'output')
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, 'q1_results.csv')
+    cc.save(out_path)
+
+    print("结果已保存")
 
 
 if __name__ == '__main__':

@@ -7,23 +7,25 @@
 输出：PDF、SVG（矢量）和 600 dpi PNG（高清位图）。
 """
 
+import numpy as np
+from matplotlib.ticker import FormatStrFormatter
+from matplotlib.lines import Line2D
+from matplotlib import patheffects
+from matplotlib import font_manager
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import warnings
 from pathlib import Path
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-from matplotlib import font_manager
-from matplotlib import patheffects
-from matplotlib.lines import Line2D
-from matplotlib.ticker import FormatStrFormatter
-import numpy as np
+warnings.filterwarnings("ignore")
 
 
 # ---------------------------- 可调整参数 ----------------------------
 FIGURE_NO = 1  # 插入论文时按全文顺序修改
 
 
-OUTPUT_DIR = Path(__file__).resolve().parent
-OUTPUT_STEM = OUTPUT_DIR / "图1_问题三_水平投影与高程剖面"
+OUTPUT_DIR = Path("./output/figs")
+OUTPUT_STEM = OUTPUT_DIR / "q3_水平投影与高程剖面"
 
 # 论文版心宽度约 156 mm；图宽严格取 156 mm。
 MM_TO_INCH = 1 / 25.4
@@ -272,14 +274,10 @@ def make_figure():
 def main():
     fig = make_figure()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUTPUT_STEM.with_suffix(".pdf"), format="pdf",
-                bbox_inches=None, facecolor="white")
-    fig.savefig(OUTPUT_STEM.with_suffix(".svg"), format="svg",
-                bbox_inches=None, facecolor="white")
     fig.savefig(OUTPUT_STEM.with_suffix(".png"), format="png", dpi=600,
                 bbox_inches=None, facecolor="white")
     plt.close(fig)
-    print(f"已输出：{OUTPUT_STEM}.pdf/.svg/.png")
+    print("绘图已完成")
 
 
 if __name__ == "__main__":

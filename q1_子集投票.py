@@ -1,12 +1,14 @@
 """绘制问题一的四台子集投票散点图（稳健性检验）。"""
 
+from matplotlib.ticker import FormatStrFormatter
+from matplotlib.patches import Ellipse
+from matplotlib import font_manager
+import matplotlib.patheffects as path_effects
+import matplotlib.pyplot as plt
+import warnings
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import matplotlib.patheffects as path_effects
-from matplotlib import font_manager
-from matplotlib.patches import Ellipse
-from matplotlib.ticker import FormatStrFormatter
+warnings.filterwarnings("ignore")
 
 
 # 问题一 q1_solution_v2.py 的复算结果（经度 °E，纬度 °N）
@@ -242,16 +244,17 @@ def make_figure():
 
 
 def main():
-    output_dir = Path(__file__).resolve().parent
+    output_dir = Path("./output/figs")
+    output_dir.mkdir(parents=True, exist_ok=True)
     fig = make_figure()
-    fig.savefig(output_dir / "图1_问题一子集投票散点图.svg", format="svg")
     fig.savefig(
-        output_dir / "图1_问题一子集投票散点图.png",
+        output_dir / "q1_子集投票散点图.png",
         format="png",
         dpi=600,
         facecolor="white",
     )
     plt.close(fig)
+    print("绘图已完成")
 
 
 if __name__ == "__main__":

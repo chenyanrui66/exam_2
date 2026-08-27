@@ -4,13 +4,15 @@
 输出：SVG 矢量图与 600 dpi PNG 高清位图。
 """
 
+from matplotlib.patches import Patch
+from matplotlib.font_manager import FontProperties
+from matplotlib.colors import BoundaryNorm, ListedColormap
+import numpy as np
+import matplotlib.pyplot as plt
+import warnings
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.colors import BoundaryNorm, ListedColormap
-from matplotlib.font_manager import FontProperties
-from matplotlib.patches import Patch
+warnings.filterwarnings("ignore")
 
 
 # 7 行对应设备 A～G，4 列对应各设备按到达时间排序的第 1～4 个读数。
@@ -116,16 +118,13 @@ def draw_heatmap(output_dir: Path) -> tuple[Path, Path]:
         columnspacing=0.7,
     )
 
-    svg_path = output_dir / "图2_问题三设备读数与残骸关联矩阵.svg"
-    png_path = output_dir / "图2_问题三设备读数与残骸关联矩阵.png"
-    fig.savefig(svg_path, format="svg", facecolor="white")
+    png_path = output_dir / "q3_设备读数与残骸关联矩阵.png"
     fig.savefig(png_path, format="png", dpi=600, facecolor="white")
     plt.close(fig)
-    return svg_path, png_path
+    return png_path
 
 
 if __name__ == "__main__":
-    output_directory = Path(__file__).resolve().parent
-    svg, png = draw_heatmap(output_directory)
-    print(f"已生成：{svg}")
-    print(f"已生成：{png}")
+    output_directory = Path("./output/figs")
+    draw_heatmap(output_directory)
+    print("绘图已完成")

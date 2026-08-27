@@ -8,24 +8,25 @@
    组合，以便与正文数值口径一致。
 3. 在 110-111 E、27-28 N 网格上，固定音爆高程为 12 km，计算含未知
    音爆时刻的 TOA 雅可比矩阵所对应的 PDOP。
-4. 输出 600 dpi PNG 和矢量 SVG；图宽为 156 mm，图题置于图下。
-   全图文字以 14 pt 为基准，并针对避免遮挡作小幅调整。
+4. 两张子图合并为一张并排图；区域外台站由图下注记单独说明。
+   输出 600 dpi PNG；图宽按双栏排版调整。全图文字以 14 pt 为基准。
 """
 
 from __future__ import annotations
+import numpy as np
+import matplotlib.patheffects as path_effects
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 
+import warnings
 from pathlib import Path
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import matplotlib.patheffects as path_effects
-import numpy as np
+warnings.filterwarnings("ignore")
 
 
 # --------------------------- 可调整参数 ---------------------------
-OUTPUT_DIR = Path(__file__).resolve().parent
-FIGURE_NO_4 = 1  # 按全文图号连续性修改
-FIGURE_NO_5 = 2
+OUTPUT_DIR = Path("./output/figs")
+FIGURE_NO = 1  # 按全文图号连续性修改
 
 LON_MIN, LON_MAX = 110.0, 111.0
 LAT_MIN, LAT_MAX = 27.0, 28.0
@@ -161,16 +162,26 @@ def draw_station(ax: plt.Axes, index: int) -> None:
                 fontweight="bold", color="black", va=va, zorder=6)
 
 
-def make_figure(combination: str, figure_number: int,
-                caption_description: str,
-                lon_grid: np.ndarray, lat_grid: np.ndarray,
-                pdop: np.ndarray) -> None:
+def get_outside_stations(combination: str) -> list[str]:
+    """返回区域外台站的名称与坐标字符串列表。"""
+    outside = []
+    for idx in combination_indices(combination):
+        lon = STATION_LON[idx]
+        lat = STATION_LAT[idx]
+        name = STATION_NAMES[idx]
+        if lat > LAT_MAX or lat < LAT_MIN or lon > LON_MAX or lon < LON_MIN:
+            outside.append(
+                f"{name} ({lon:.3f} deg E, {lat:.3f} deg N)"
+            )
+    return outside
+
+
+def draw_subplot(ax: plt.Axes, combination: str,
+                 lon_grid: np.ndarray, lat_grid: np.ndarray,
+                 pdop: np.ndarray) -> mpl.contour.QuadContourSet:
+    """绘制单个子图（一个设备组合的热力图），返回 contourf 对象供 colorbar 使用。"""
     stats = summarize(pdop)
     redundancy = len(combination) - 4
-
-    # 156 mm = 6.142 in；稍留安全余量，满足“宽度不超过版心”。
-    fig, ax = plt.subplots(figsize=(6.10, 5.85), dpi=160)
-    fig.subplots_adjust(left=0.16, right=0.85, top=0.93, bottom=0.2)
 
     contour = ax.contourf(
         lon_grid, lat_grid, pdop,
@@ -180,9 +191,9 @@ def make_figure(combination: str, figure_number: int,
         antialiased=True,
     )
     # 关键等值线：PDOP=3 与 PDOP=5
-    lines = ax.contour(lon_grid, lat_grid, pdop,
-                       levels=[3.0, 5.0], colors=["#155724", "#6f1d1b"],
-                       linewidths=[1.2, 1.1])
+    ax.contour(lon_grid, lat_grid, pdop,
+               levels=[3.0, 5.0], colors=["#155724", "#6f1d1b"],
+               linewidths=[1.2, 1.1])
 
     for idx in combination_indices(combination):
         draw_station(ax, int(idx))
@@ -190,61 +201,96 @@ def make_figure(combination: str, figure_number: int,
     ax.set_xlim(LON_MIN, LON_MAX)
     ax.set_ylim(LAT_MIN, LAT_MAX)
     ax.set_aspect(KM_PER_DEG_LAT / KM_PER_DEG_LON)
-    ax.set_xlabel("经度（°E）", fontsize=16)
-    ax.set_ylabel("纬度（°N）", fontsize=16)
-    ax.tick_params(labelsize=14)
+    ax.set_xlabel("经度（$^\circ$ E）", fontsize=14)
+    ax.set_ylabel("纬度（$^\circ$ N）", fontsize=14)
+    ax.tick_params(labelsize=12)
     ax.grid(color="white", linestyle="--", linewidth=0.55, alpha=0.48)
 
+    # 左上角信息框
+    info_text = (
+        f"组合 {combination} | {len(combination)}台\n"
+        f"冗余自由度 {redundancy} | 高程 {SOURCE_ALT_KM:g} km"
+    )
     ax.text(
-        0.02, 0.975,
-        f"组合 {combination}｜{len(combination)}台\n"
-        f"冗余自由度 {redundancy}｜高程 {SOURCE_ALT_KM:g} km",
+        0.02, 0.975, info_text,
         transform=ax.transAxes, va="top", ha="left", fontsize=10,
         bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
                   edgecolor="#555555", alpha=0.90),
         zorder=20,
     )
-    outside = [
-        f"{STATION_NAMES[idx]} {STATION_LAT[idx]:.3f}°N"
-        for idx in combination_indices(combination)
-        if STATION_LAT[idx] > LAT_MAX
-    ]
+
+    # 左下角统计信息框
+    stat_text = (
+        f"中位PDOP {stats['median']:.2f} | P95 {stats['p95']:.2f}\n"
+        f"PDOP<=3：{stats['area_le_3']:.1f}% | PDOP<=5：{stats['area_le_5']:.1f}%"
+    )
     ax.text(
-        0.02, 0.025,
-        f"中位PDOP {stats['median']:.2f}｜P95 {stats['p95']:.2f}\n"
-        f"PDOP≤3：{stats['area_le_3']:.1f}%｜PDOP≤5：{stats['area_le_5']:.1f}%",
+        0.02, 0.025, stat_text,
         transform=ax.transAxes, va="bottom", ha="left", fontsize=10,
         bbox=dict(boxstyle="round,pad=0.32", facecolor="white",
                   edgecolor="#666666", alpha=0.88),
         zorder=20,
     )
 
-    colorbar = fig.colorbar(contour, ax=ax, pad=0.025, fraction=0.052)
-    colorbar.set_label("PDOP（km/s）", fontsize=10)
-    colorbar.ax.tick_params(labelsize=9)
+    return contour
 
-    stem = f"q2_pdop_{len(combination)}stations_{combination}"
-    fig.savefig(OUTPUT_DIR / f"{stem}.png", dpi=600,
-                bbox_inches="tight", pad_inches=0.03)
-    fig.savefig(OUTPUT_DIR / f"{stem}.svg",
-                bbox_inches="tight", pad_inches=0.03)
+
+def make_combined_figure(lon4, lat4, pdop4, lon5, lat5, pdop5) -> None:
+    """将两张PDOP热力图合并为一张并排图，并在图下注记区域外台站。"""
+    # 双栏并排：总宽度约 320 mm (12.6 in)，高度约 155 mm (6.1 in)
+    fig, axes = plt.subplots(1, 2, figsize=(12.6, 6.1), dpi=160)
+    fig.subplots_adjust(left=0.08, right=0.92, top=0.90, bottom=0.20,
+                        wspace=0.28)
+
+    # 左图：4台 ABEF
+    contour4 = draw_subplot(axes[0], COMBINATION_4, lon4, lat4, pdop4)
+    axes[0].set_title(f"(a) {COMBINATION_4} 组合（4台设备）", fontsize=14, pad=8)
+
+    # 右图：5台 ABDEF
+    contour5 = draw_subplot(axes[1], COMBINATION_5, lon5, lat5, pdop5)
+    axes[1].set_title(f"(b) {COMBINATION_5} 组合（5台设备）", fontsize=14, pad=8)
+
+    # 各子图独立 colorbar
+    cbar4 = fig.colorbar(contour4, ax=axes[0], pad=0.02, fraction=0.046)
+    cbar4.set_label("PDOP（km/s）", fontsize=10)
+    cbar4.ax.tick_params(labelsize=9)
+
+    cbar5 = fig.colorbar(contour5, ax=axes[1], pad=0.02, fraction=0.046)
+    cbar5.set_label("PDOP（km/s）", fontsize=10)
+    cbar5.ax.tick_params(labelsize=9)
+
+    # ---- 区域外台站注记（图下单独说明） ----
+    outside_4 = get_outside_stations(COMBINATION_4)
+    outside_5 = get_outside_stations(COMBINATION_5)
+
+    note_lines = []
+    if outside_4:
+        note_lines.append(
+            f"(a) {COMBINATION_4} 区域外台站：{', '.join(outside_4)}"
+        )
+    if outside_5:
+        note_lines.append(
+            f"(b) {COMBINATION_5} 区域外台站：{', '.join(outside_5)}"
+        )
+
+    if note_lines:
+        note_text = "；".join(note_lines) + "。"
+    else:
+        note_text = "注：所有台站均位于计算区域内。"
+
+    fig.text(0.515, 0.09, note_text, ha="center", va="top", fontsize=11,
+             wrap=True,
+             bbox=dict(boxstyle="round,pad=0.4", facecolor="#f8f9fa",
+                       edgecolor="#adb5bd", alpha=0.95))
+
+    # 保存 PNG（600 dpi），路径保持原样
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    fig.savefig(
+        OUTPUT_DIR / "q2_pdop热力图.png", dpi=600,
+        bbox_inches="tight", pad_inches=0.03
+    )
     plt.close(fig)
-
-
-def print_comparison(stats4: dict[str, float],
-                     stats5: dict[str, float]) -> None:
-    def reduction(key: str) -> float:
-        return (stats4[key] - stats5[key]) / stats4[key] * 100
-
-    print("问题二 PDOP 空间统计（固定高程 12 km）")
-    print(f"4台 {COMBINATION_4}: {stats4}")
-    print(f"5台 {COMBINATION_5}: {stats5}")
-    print(f"中位PDOP降低 {reduction('median'):.1f}%")
-    print(f"95%分位PDOP降低 {reduction('p95'):.1f}%")
-    print(f"PDOP≤3覆盖率增加 "
-          f"{stats5['area_le_3'] - stats4['area_le_3']:.1f} 个百分点")
-    print(f"PDOP≤5覆盖率增加 "
-          f"{stats5['area_le_5'] - stats4['area_le_5']:.1f} 个百分点")
+    print("合并图已保存")
 
 
 def main() -> None:
@@ -253,19 +299,8 @@ def main() -> None:
     lon4, lat4, pdop4 = compute_grid(COMBINATION_4)
     lon5, lat5, pdop5 = compute_grid(COMBINATION_5)
 
-    make_figure(
-        COMBINATION_4,
-        FIGURE_NO_4,
-        "问题二四台设备组合ABEF的PDOP空间热力图",
-        lon4, lat4, pdop4,
-    )
-    make_figure(
-        COMBINATION_5,
-        FIGURE_NO_5,
-        "问题二五台设备组合ABDEF的PDOP空间热力图",
-        lon5, lat5, pdop5,
-    )
-    print_comparison(summarize(pdop4), summarize(pdop5))
+    make_combined_figure(lon4, lat4, pdop4, lon5, lat5, pdop5)
+    print("绘图已完成")
 
 
 if __name__ == "__main__":

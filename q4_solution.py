@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 问题4：±0.5 s 计时误差下的模型修正、误差分析与加密台网方案
 ================================================================
@@ -12,13 +13,21 @@
           （中心1台 + 内环4台 + 外环8台），用问题3的定位结果正向模拟
           新台网的音爆抵达时刻，再用两阶段修正模型反演验证（3D误差<1 km）。
 
-仅依赖 numpy（绘图部分需 matplotlib，可注释掉）。
+输出约定：
+  - 全部q4_results分节写入 ./output/问题4_q4_results.csv（相对本脚本所在目录）；
+  - 控制台不打印中间过程，结束时仅打印"结果已保存"字样。
+
+依赖：numpy、pandas、csv_writer（同目录）。
 运行：python 问题4_误差修正与加密台网方案.py
 """
 import itertools
+import os
 import time
 
 import numpy as np
+import pandas as pd
+
+from csv_writer import CsvCollector
 
 C = 340.0            # 声速 m/s
 DELTA = 0.5          # 计时误差界：U(-0.5, +0.5) s
@@ -56,6 +65,12 @@ truth = np.array([
     [*to_local(110.300000, 27.650000, 11478.0), 14.0000],   # 残骸3
     [*to_local(110.699999, 27.650000, 13468.0), 15.0000],   # 残骸4
 ])
+TRUTH_LL = [  # 真值的经纬度表示（供CSV输出）
+    (110.500001, 27.309998, 12514.0, 11.9999),
+    (110.499999, 27.949998, 11529.0, 13.0014),
+    (110.300000, 27.650000, 11478.0, 14.0000),
+    (110.699999, 27.650000, 13468.0, 15.0000),
+]
 
 # 解空间边界（x, y, z, tau）
 LOW = np.array([-50000.0, -50000.0, 0.0, -400.0])
@@ -72,14 +87,6 @@ for _ids in itertools.combinations(range(7), 4):
 _combos4.sort(key=lambda x: x[0])
 SEED_GROUPS = [ii for _, ii in _combos4[:4]]
 SEED7 = SEED_GROUPS[0]   # 条件数最好的一组，用于补全机制
-
-# 无噪声时，设备 i 上属于残骸 j 的读数序号（加噪重排前的"标准答案"）
-T_true = np.array([[truth[j, 3] + np.linalg.norm(S[i] - truth[j, :3]) / C
-                    for j in range(4)] for i in range(7)])
-true_choice = np.zeros((7, 4), dtype=int)
-for i in range(7):
-    for rank, j in enumerate(np.argsort(T_true[i])):
-        true_choice[i, j] = rank
 
 
 # ==================== 2. 修正模型核心 ====================
@@ -160,9 +167,11 @@ def _enum_candidates(Tobs, rmse_thr, maxabs_thr):
     cand = []
     for n, seeds in batch_seeds(Tobs, SEED_GROUPS).items():
         obs = Tobs[ALL7, combo_idx[n]]
-        th, rmse, mx = min((refine(sd, obs) for sd in seeds), key=lambda x: x[1])
+        th, rmse, mx = min((refine(sd, obs)
+                           for sd in seeds), key=lambda x: x[1])
         if rmse < rmse_thr and mx < maxabs_thr:
-            cand.append(dict(choice=combo_idx[n], theta=th, rmse=rmse, maxabs=mx))
+            cand.append(
+                dict(choice=combo_idx[n], theta=th, rmse=rmse, maxabs=mx))
     cand.sort(key=lambda q: q["rmse"])
     return cand
 
@@ -181,6 +190,29 @@ def _try_cover(cand):
         if best is None or score < best[0]:
             best = (score, g)
     return best
+
+
+def _analytic_seeds_single(obs):
+    """单组合解析种子（SEED7一组种子站），供补全机制使用"""
+    ss, tt = S[SEED7], obs[SEED7]
+    A = 2 * (ss[1:] - ss[0])
+    b0 = np.sum(ss[1:] ** 2, axis=1) - ss[0] @ ss[0] - \
+        C * C * (tt[1:] ** 2 - tt[0] ** 2)
+    b1 = 2 * C * C * (tt[1:] - tt[0])
+    try:
+        p0 = np.linalg.solve(A, b0)
+        p1 = np.linalg.solve(A, b1)
+    except np.linalg.LinAlgError:
+        return []
+    v = p0 - ss[0]
+    qa = p1 @ p1 - C * C
+    qb = 2 * (p1 @ v + C * C * tt[0])
+    qc = v @ v - C * C * tt[0] ** 2
+    out = []
+    for r in np.roots([qa, qb, qc]):
+        if abs(r.imag) < 1e-6:
+            out.append(np.r_[p0 + p1 * r.real, r.real])
+    return out
 
 
 def solve_noisy(Tobs, rmse_thr=0.55, maxabs_thr=0.65):
@@ -218,33 +250,13 @@ def solve_noisy(Tobs, rmse_thr=0.55, maxabs_thr=0.65):
                        and sd[3] <= obs_r.min()]
             if not seeds_r:
                 continue
-            th, rmse, mx = min((refine(sd, obs_r) for sd in seeds_r), key=lambda x: x[1])
+            th, rmse, mx = min((refine(sd, obs_r)
+                               for sd in seeds_r), key=lambda x: x[1])
             if rmse < 0.9 and mx < 1.0:    # 宽阈值验证（物理上它必是第4残骸）
-                g4 = g + [dict(choice=np.array(rem), theta=th, rmse=rmse, maxabs=mx)]
+                g4 = g + [dict(choice=np.array(rem), theta=th,
+                               rmse=rmse, maxabs=mx)]
                 return (sum(x["rmse"] ** 2 for x in g4), g4), "completed"
     return None, "failed"
-
-
-def _analytic_seeds_single(obs):
-    """单组合解析种子（SEED7一组种子站），供补全机制使用"""
-    ss, tt = S[SEED7], obs[SEED7]
-    A = 2 * (ss[1:] - ss[0])
-    b0 = np.sum(ss[1:] ** 2, axis=1) - ss[0] @ ss[0] - C * C * (tt[1:] ** 2 - tt[0] ** 2)
-    b1 = 2 * C * C * (tt[1:] - tt[0])
-    try:
-        p0 = np.linalg.solve(A, b0)
-        p1 = np.linalg.solve(A, b1)
-    except np.linalg.LinAlgError:
-        return []
-    v = p0 - ss[0]
-    qa = p1 @ p1 - C * C
-    qb = 2 * (p1 @ v + C * C * tt[0])
-    qc = v @ v - C * C * tt[0] ** 2
-    out = []
-    for r in np.roots([qa, qb, qc]):
-        if abs(r.imag) < 1e-6:
-            out.append(np.r_[p0 + p1 * r.real, r.real])
-    return out
 
 
 # ==================== Part B：蒙特卡洛算例 ====================
@@ -269,13 +281,10 @@ def evaluate(solutions):
 
 
 def part_b(nmc=300, seed=555):
-    print("=" * 72)
-    print(f"Part B  修正模型算例：问题3数据 + U(-{DELTA},+{DELTA}) s 噪声，蒙特卡洛 {nmc} 次")
-    print("=" * 72)
+    """7台现状蒙特卡洛。返回 (误差数组, 成功数, 失败数, 模式统计dict)。"""
     rng = np.random.default_rng(seed)
     E = np.full((nmc, 4, 4), np.nan)
     fail, modes = 0, {}
-    t0 = time.time()
     for n in range(nmc):
         best, mode = solve_noisy(add_noise7(rng))
         modes[mode] = modes.get(mode, 0) + 1
@@ -288,19 +297,7 @@ def part_b(nmc=300, seed=555):
         else:
             E[n] = e
     ok = ~np.isnan(E[:, 0, 0])
-    V = E[ok]
-    print(f"耗时 {time.time()-t0:.0f} s；成功 {ok.sum()}/{nmc}，失败/混淆 {fail}；"
-          f"求解模式统计 {modes}")
-    names = ["水平误差(m)", "高程误差(m)", "3D误差(m)", "时刻误差(ms)"]
-    print(f"\n{'指标':<12}{'均值':>9}{'中位':>9}{'95%分位':>9}{'最大':>9}")
-    for k, lab in enumerate(names):
-        v = V[:, :, k].ravel() * (1000.0 if k == 3 else 1.0)
-        print(f"{lab:<12}{v.mean():>9.0f}{np.median(v):>9.0f}"
-              f"{np.percentile(v, 95):>9.0f}{v.max():>9.0f}")
-    v3 = V[:, :, 2].ravel()
-    print(f"\n3D误差>1 km 比例: {(v3 > 1000).mean() * 100:.1f}%   "
-          f"← 结论：7台现状不满足『误差<1 km』，瓶颈在高程方向")
-    return V
+    return E[ok], int(ok.sum()), fail, modes
 
 
 # ==================== Part C：加密台网方案 ====================
@@ -358,7 +355,6 @@ def refine_M(theta, obs, S_arr, iters=80):
                 break
         else:
             lam = min(lam * 10, 1e12)
-    r = obs - th[3] - np.linalg.norm(S_arr - th[:3], axis=1) / C
     return th, float(np.sqrt(np.mean(r * r))), float(np.max(np.abs(r)))
 
 
@@ -371,7 +367,8 @@ def solve_dense(Tobs20, w1=6.0, w2=1.5):
     best, _ = solve_noisy(Tobs20[:7])
     if best is None:
         return None
-    thetas = [x["theta"].copy() for x in sorted(best[1], key=lambda q: q["theta"][3])]
+    thetas = [x["theta"].copy() for x in sorted(
+        best[1], key=lambda q: q["theta"][3])]
     for w in (w1, w2):
         new_thetas = []
         for th in thetas:
@@ -394,32 +391,10 @@ def add_noise20(rng):
 
 
 def part_c(nmc=300, seed=2026):
-    print("\n" + "=" * 72)
-    print("Part C  加密台网方案：设计依据、正向模拟与反演验证")
-    print("=" * 72)
-    sig_t = DELTA / np.sqrt(3)
-    print(f"噪声水平 σ_t = {sig_t*1000:.0f} ms；目标 95% 3D误差<1 km "
-          f"→ 需要 PDOP ≲ {0.5/sig_t:.2f} km/s\n")
-    layouts = {
-        "原7台": S,
-        "7+中心1+外环8 (16台)": np.vstack([S, center[None, :], ring(8, 45, 22.5)]),
-        "7+中心1+内环4+外环8 (20台)": S_NEW,
-        "7+内环6+外环10 (23台)": np.vstack([S, ring(6, 18, 0), ring(10, 50, 18)]),
-    }
-    print(f"{'布局':<30}{'台数':>5}{'最坏PDOP(km/s)':>15}{'预估σ_3D(m)':>13}")
-    for name, Sa in layouts.items():
-        p = max(pdop_at(truth[j], Sa) for j in range(4))
-        print(f"{name:<30}{len(Sa):>5}{p:>15.3f}{p * sig_t * 1000:>13.0f}")
-
-    print("\n新增13台坐标（原7台不变）：")
-    for k, st in enumerate(S_NEW[7:], 1):
-        print(f"  N{k:02d}: {110 + st[0]/97304:.4f}°E, {27 + st[1]/111263:.4f}°N, "
-              f"高程 {st[2]:.0f} m")
-
+    """20台加密台网蒙特卡洛。返回 (误差数组, 成功数, 失败数)。"""
     rng = np.random.default_rng(seed)
     E = np.full((nmc, 4, 4), np.nan)
     fail = 0
-    t0 = time.time()
     for n in range(nmc):
         thetas = solve_dense(add_noise20(rng))
         if thetas is None:
@@ -431,25 +406,135 @@ def part_c(nmc=300, seed=2026):
         else:
             E[n] = e
     ok = ~np.isnan(E[:, 0, 0])
-    V = E[ok]
-    print(f"\n蒙特卡洛 {nmc} 次，耗时 {time.time()-t0:.0f} s；成功 {ok.sum()}，失败 {fail}")
-    names = ["水平误差(m)", "高程误差(m)", "3D误差(m)", "时刻误差(ms)"]
-    print(f"\n{'指标':<12}{'均值':>9}{'中位':>9}{'95%分位':>9}{'最大':>9}")
-    for k, lab in enumerate(names):
+    return E[ok], int(ok.sum()), fail
+
+
+# ==================== 3. 数据汇总与CSV输出 ====================
+ERR_COLS = ["水平误差(m)", "高程误差(m)", "3D误差(m)", "时刻误差(ms)"]
+
+
+def detail_df(V, nmc):
+    """误差数组 (n成功,4,4) → 长表DataFrame（每次试验×每残骸一行）"""
+    recs = []
+    for t in range(V.shape[0]):
+        for j in range(4):
+            recs.append({
+                "试验序号": t + 1, "残骸": f"#{j + 1}",
+                "水平误差(m)": V[t, j, 0], "高程误差(m)": V[t, j, 1],
+                "3D误差(m)": V[t, j, 2], "时刻误差(ms)": V[t, j, 3] * 1000.0,
+            })
+    return pd.DataFrame(recs)
+
+
+def stats_df(V):
+    """误差数组 → 统计汇总DataFrame（4个指标 × 均值/中位/95%分位/最大）"""
+    rows = []
+    for k, lab in enumerate(ERR_COLS):
         v = V[:, :, k].ravel() * (1000.0 if k == 3 else 1.0)
-        print(f"{lab:<12}{v.mean():>9.0f}{np.median(v):>9.0f}"
-              f"{np.percentile(v, 95):>9.0f}{v.max():>9.0f}")
-    v3 = V[:, :, 2].ravel()
-    print(f"\n3D误差>1 km 比例: {(v3 > 1000).mean() * 100:.2f}%   ← 目标达成")
-    return V
+        rows.append({"指标": lab, "均值": v.mean(), "中位": np.median(v),
+                     "95%分位": np.percentile(v, 95), "最大": v.max()})
+    return pd.DataFrame(rows)
+
+
+def demo_case_df(thetas):
+    """单次算例：解出的事件列表 → DataFrame（按音爆时刻排序，含相对真值误差）"""
+    rows = []
+    for th in sorted(thetas, key=lambda q: q[3]):
+        d3 = np.linalg.norm(truth[:, :3] - th[:3], axis=1)
+        j = int(np.argmin(d3))
+        rows.append({
+            "残骸": f"#{j + 1}",
+            "经度(°E)": 110 + th[0] / 97304, "纬度(°N)": 27 + th[1] / 111263,
+            "高程(km)": th[2] / 1000, "音爆时刻(s)": th[3],
+            "3D误差(m)": d3[j], "时刻误差(ms)": abs(th[3] - truth[j, 3]) * 1000.0,
+        })
+    return pd.DataFrame(rows)
+
+
+def build_csv(path, V7, ok7, fail7, modes7, V20, ok20, fail20, demo7, demo20):
+    """汇总全部q4_results，分节写入单个CSV"""
+    cc = CsvCollector()
+    sig_t = DELTA / np.sqrt(3)
+
+    # 节1：试验概况
+    cc.add("试验概况", pd.DataFrame([
+        {"台网": "原7台", "蒙特卡洛次数": ok7 + fail7, "成功": ok7, "失败": fail7,
+         "3D误差>1km比例(%)": (V7[:, :, 2].ravel() > 1000).mean() * 100,
+         "严阈值成功(strict)": modes7.get("strict", 0),
+         "补全兜底(completed)": modes7.get("completed", 0)},
+        {"台网": "20台加密", "蒙特卡洛次数": ok20 + fail20, "成功": ok20, "失败": fail20,
+         "3D误差>1km比例(%)": (V20[:, :, 2].ravel() > 1000).mean() * 100,
+         "严阈值成功(strict)": "-", "补全兜底(completed)": "-"},
+    ]))
+
+    # 节2/3：误差统计汇总
+    cc.add("误差统计_原7台", stats_df(V7))
+    cc.add("误差统计_20台加密", stats_df(V20))
+
+    # 节4/5：逐次试验误差明细（绘图CDF数据源）
+    cc.add("误差明细_原7台", detail_df(V7, ok7))
+    cc.add("误差明细_20台加密", detail_df(V20, ok20))
+
+    # 节6：PDOP精度预算
+    layouts = {
+        "原7台": S,
+        "7+中心1+外环8 (16台)": np.vstack([S, center[None, :], ring(8, 45, 22.5)]),
+        "7+中心1+内环4+外环8 (20台, 推荐)": S_NEW,
+        "7+内环6+外环10 (23台)": np.vstack([S, ring(6, 18, 0), ring(10, 50, 18)]),
+    }
+    cc.add("PDOP精度预算", pd.DataFrame([
+        {"布局": name, "台数": len(Sa),
+         "最坏PDOP(km/s)": max(pdop_at(truth[j], Sa) for j in range(4)),
+         "预估σ_3D(m)": max(pdop_at(truth[j], Sa) for j in range(4)) * sig_t * 1000}
+        for name, Sa in layouts.items()
+    ]))
+
+    # 节7：台网台站坐标（绘图布局数据源）
+    groups = (["原台站"] * 7 + ["中心"] + ["内环"] * 4 + ["外环"] * 8)
+    sta_names = list("ABCDEFG") + [f"N{k:02d}" for k in range(1, 14)]
+    cc.add("台网台站", pd.DataFrame([
+        {"台站": sta_names[i], "组别": groups[i],
+         "经度(°E)": 110 + S_NEW[i, 0] / 97304,
+         "纬度(°N)": 27 + S_NEW[i, 1] / 111263,
+         "高程(m)": S_NEW[i, 2]}
+        for i in range(M)
+    ]))
+
+    # 节8：残骸音爆点真值
+    cc.add("残骸音爆点真值", pd.DataFrame([
+        {"残骸": f"#{j + 1}", "经度(°E)": lo, "纬度(°N)": la,
+         "高程(m)": z, "音爆时刻(s)": tau}
+        for j, (lo, la, z, tau) in enumerate(TRUTH_LL)
+    ]))
+
+    # 节9/10：单次算例（固定随机种子，可复现）
+    cc.add("单次算例_原7台", demo7)
+    cc.add("单次算例_20台加密", demo20)
+
+    cc.save(path)
 
 
 if __name__ == "__main__":
     np.set_printoptions(suppress=True)
-    V7 = part_b(nmc=300)
-    V20 = part_c(nmc=300)
+    t0 = time.time()
 
-    print("\n" + "=" * 72)
-    print("汇总：修正模型把±0.5 s噪声下的关联成功率保持在100%（容错机制兜底）；")
-    print("定位精度由台网几何决定：7台→3D误差95%分位约1.2 km（高程主导），")
-    print("加密至20台→约0.45 km，满足『误差<1 km』要求。")
+    # Part B：7台现状蒙特卡洛
+    V7, ok7, fail7, modes7 = part_b(nmc=300)
+    # Part C：20台加密台网蒙特卡洛
+    V20, ok20, fail20 = part_c(nmc=300)
+
+    # 单次算例（固定种子，与报告一致）
+    best_d, _ = solve_noisy(add_noise7(np.random.default_rng(20260827)))
+    demo7 = demo_case_df([x["theta"] for x in best_d[1]])
+    demo20 = demo_case_df(solve_dense(
+        add_noise20(np.random.default_rng(20260827))))
+
+    # 输出CSV到 ./output/
+    out_dir = os.path.join(os.path.dirname(
+        os.path.abspath(__file__)), "output")
+    os.makedirs(out_dir, exist_ok=True)
+    csv_path = os.path.join(out_dir, "q4_results.csv")
+    build_csv(csv_path, V7, ok7, fail7, modes7,
+              V20, ok20, fail20, demo7, demo20)
+
+    print(f"结果已保存: {csv_path}")

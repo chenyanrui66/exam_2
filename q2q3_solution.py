@@ -286,7 +286,7 @@ def solve():
     collector.add("PDOP分析", df_pdop)
 
     # 保存CSV
-    output_path = "./output/result.csv"
+    output_path = "./output/q2q3_results.csv"
     collector.save(output_path)
 
     # 同时保留JSON
@@ -300,7 +300,7 @@ def solve():
         "answer": out
     }
     os.makedirs("./output", exist_ok=True)
-    with open("./output/result.json", "w", encoding="utf-8") as f:
+    with open("./output/q2q3_results.json", "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
     print("结果已保存")
