@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from matplotlib import font_manager as fm
 
-# ---------- 字体自动检测 ----------
-
 
 def setup_chinese_font():
     candidates = [
@@ -25,7 +23,6 @@ def setup_chinese_font():
     return 'sans-serif'
 
 
-# ---------- 全局样式 ----------
 BASE_SIZE = 17
 COLORS = {
     'bg': '#FFFFFF', 'bg_panel': '#F5F5F0', 'grid': '#E8E8E0',
@@ -47,7 +44,6 @@ plt.rcParams.update({
     'legend.fontsize': BASE_SIZE - 2, 'mathtext.fontset': 'stix',
 })
 
-# ---------- 数据 ----------
 S1, S2, S3, S4 = np.array([0, 0]), np.array(
     [5, 1]), np.array([2, 4.5]), np.array([-1.5, 3])
 P_true = np.array([2.2, 2.3])
@@ -56,7 +52,7 @@ r1, r2, r3, r4 = [np.linalg.norm(P_true - s) for s in [S1, S2, S3, S4]]
 fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 fig.patch.set_facecolor(COLORS['bg'])
 
-# ===== 子图1：两球面相交 → 根平面 =====
+
 ax1 = axes[0]
 ax1.set_facecolor(COLORS['bg_panel'])
 for s, r, c in [(S1, r1, COLORS['sphere1']), (S2, r2, COLORS['sphere2'])]:
@@ -109,7 +105,7 @@ ax1.text(0.5, -0.20,
          transform=ax1.transAxes, fontsize=BASE_SIZE-3, ha='center', va='top',
          color=COLORS['text_light'])
 
-# ===== 子图2：三个根平面 → 交汇直线 =====
+
 ax2 = axes[1]
 ax2.set_facecolor(COLORS['bg_panel'])
 for s, r, c in [(S1, r1, COLORS['sphere1']), (S2, r2, COLORS['sphere2']), (S3, r3, COLORS['sphere3'])]:

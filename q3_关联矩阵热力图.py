@@ -1,8 +1,3 @@
-"""绘制问题三的“设备读数—残骸”关联矩阵热力图。
-
-数据来源：问题三联合求解结果（残骸按音爆时刻由早到晚编号 #1～#4）。
-输出：SVG 矢量图与 600 dpi PNG 高清位图。
-"""
 
 from matplotlib.patches import Patch
 from matplotlib.font_manager import FontProperties
@@ -15,8 +10,6 @@ from pathlib import Path
 warnings.filterwarnings("ignore")
 
 
-# 7 行对应设备 A～G，4 列对应各设备按到达时间排序的第 1～4 个读数。
-# 单元格值是该读数所属的残骸编号。
 ASSOCIATION = np.array(
     [
         [1, 3, 4, 2],  # A
@@ -30,7 +23,7 @@ ASSOCIATION = np.array(
     dtype=int,
 )
 
-# 各设备 4 个读数的音爆抵达时间（s，题目问题三数据表），与 ASSOCIATION 行列一一对应。
+
 ARRIVAL_TIMES = np.array(
     [
         [100.767, 164.229, 214.850, 270.065],  # A
@@ -47,8 +40,7 @@ ARRIVAL_TIMES = np.array(
 DEVICES = list("ABCDEFG")
 READING_NUMBERS = [1, 2, 3, 4]
 
-# Nature Publishing Group 风格配色，并保持既定语义：
-# #1 红、#2 蓝、#3 绿、#4 黄。颜色在白色分隔线和论文打印中保持清晰区分。
+
 COLORS = ["#E64B35", "#4DBBD5", "#57CA87", "#F6C85F"]
 
 
@@ -75,7 +67,6 @@ def draw_heatmap(output_dir: Path) -> tuple[Path, Path]:
     validate_association(ASSOCIATION)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 156 mm = 6.1417 in；略留余量，确保不超过论文约 156 mm 的版心宽度。
     fig = plt.figure(figsize=(6.10, 5.20), facecolor="white")
     ax = fig.add_axes([0.12, 0.18, 0.80, 0.8])
 
@@ -91,7 +82,6 @@ def draw_heatmap(output_dir: Path) -> tuple[Path, Path]:
     ax.set_ylabel("监测设备", fontproperties=_font(14), labelpad=12)
     ax.tick_params(axis="both", which="major", length=0)
 
-    # 白色分隔线使 28 个归属单元清楚可辨。
     ax.set_xticks(np.arange(-0.5, 4, 1), minor=True)
     ax.set_yticks(np.arange(-0.5, 7, 1), minor=True)
     ax.grid(which="minor", color="white", linewidth=2.0)
@@ -100,8 +90,6 @@ def draw_heatmap(output_dir: Path) -> tuple[Path, Path]:
         spine.set_linewidth(0.8)
         spine.set_color("#555555")
 
-    # 在颜色之外直接标注该读数的音爆抵达时间（s），便于黑白打印和快速核读。
-    # 颜色仍按所属残骸决定，时间比编号更长，故字号适当缩小。
     text_colors = {1: "white", 2: "white", 3: "#1F2A16", 4: "#3A3300"}
     for i in range(ASSOCIATION.shape[0]):
         for j in range(ASSOCIATION.shape[1]):

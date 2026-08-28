@@ -1,22 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-问题4 稳健性检验：基于q4蒙特卡洛结果的纯数据分析
-================================================
-数据源：./output/q4_results.csv（由 问题4_误差修正与加密台网方案.py 生成，
-分节CSV，用 csv_writer.read_sections 解析），本脚本不再重新跑蒙特卡洛，
-直接对已有的300次误差样本做稳健性检验。
 
-检验内容：
-  1) Bootstrap置信区间   —— 重抽样检验均值/95%分位数估计的稳定性
-  2) 阈值敏感性          —— 换用不同精度阈值，"优于7台"的结论是否翻转
-  3) 截尾稳健性          —— 剔除5%极端样本，结论是否由个别大误差驱动
-  4) 分残骸稳健性        —— 逐个残骸看20台加密是否一致占优
-  5) 台数外推稳健性      —— 由PDOP精度预算验证加密方案的误差缩减符合几何规律
-
-输出：./output/q4_robustness_results.csv（csv_writer.CsvCollector 分节整合）
-
-运行：python q4_robustness.py
-"""
 import os
 import time
 
@@ -29,20 +11,20 @@ _here = os.path.dirname(os.path.abspath(__file__))
 CSV_IN = os.path.join(_here, "output", "q4_results.csv")
 CSV_OUT = os.path.join(_here, "output", "q4_robustness_results.csv")
 
-N_BOOT = 2000          # Bootstrap重抽样次数
-THRESHOLDS_KM = (0.5, 0.75, 1.0, 1.25, 1.5)  # 精度阈值敏感性扫描
-TRIM = 0.05            # 截尾比例（两端各5%）
+N_BOOT = 2000
+THRESHOLDS_KM = (0.5, 0.75, 1.0, 1.25, 1.5)
+TRIM = 0.05
 RNG = np.random.default_rng(2024)
 
 
 def _trimmed(x, p):
-    """两端各截掉比例p后的均值"""
+
     lo, hi = np.quantile(x, [p, 1 - p])
     return float(np.mean(x[(x >= lo) & (x <= hi)]))
 
 
 def bootstrap_ci(err, stat_fn, n=N_BOOT):
-    """对统计量stat_fn做Bootstrap，返回(点估计, 下界, 上界)"""
+
     est = stat_fn(err)
     reps = np.empty(n)
     m = len(err)
@@ -58,8 +40,6 @@ def main():
     nets = {"原7台": sec["误差明细_原7台"], "20台加密": sec["误差明细_20台加密"]}
     col = CsvCollector()
 
-    # ---------- 1) Bootstrap置信区间 ----------
-
     rows = []
     stats = [("均值(m)", np.mean), ("中位数(m)", np.median),
              ("95%分位(m)", lambda v: np.percentile(v, 95))]
@@ -71,8 +51,6 @@ def main():
                          "95%CI下界": round(lo, 2), "95%CI上界": round(hi, 2)})
     boot = col.add("Bootstrap置信区间_3D误差", pd.DataFrame(rows))
 
-    # ---------- 2) 阈值敏感性 ----------
-
     rows = []
     for thr in THRESHOLDS_KM:
         row = {"精度阈值(km)": thr}
@@ -82,7 +60,6 @@ def main():
         rows.append(row)
     col.add("精度阈值敏感性", pd.DataFrame(rows))
 
-    # ---------- 3) 截尾稳健性 ----------
     rows = []
     for name, df in nets.items():
         e = df["3D误差(m)"].to_numpy()
@@ -90,8 +67,6 @@ def main():
                      f"截尾{int(TRIM*100)}%均值(m)": round(_trimmed(e, TRIM), 2),
                      "全样本95%分位(m)": round(np.percentile(e, 95), 2)})
     col.add("截尾稳健性", pd.DataFrame(rows))
-
-    # ---------- 4) 分残骸稳健性 ----------
 
     rows = []
     for deb, g7 in nets["原7台"].groupby("残骸"):
@@ -105,10 +80,8 @@ def main():
                      "20台>1km(%)": round(100 * np.mean(e20 > 1000), 2)})
     col.add("分残骸稳健性", pd.DataFrame(rows))
 
-    # ---------- 5) 台数外推稳健性（PDOP几何规律） ----------
-
     pdop = sec["PDOP精度预算"].copy()
-    # 解析台数列，检验σ_3D ∝ 1/√N 的几何规律下20台方案是否落在合理区间
+
     pdop["σ√N"] = pdop["预估σ_3D(m)"] * np.sqrt(pdop["台数"])
     pdop["σ√N"] = pdop["σ√N"].round(1)
     col.add("台数外推稳健性_PDOP", pdop)

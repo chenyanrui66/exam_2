@@ -4,8 +4,6 @@ from matplotlib.patches import Circle
 from matplotlib.lines import Line2D
 from matplotlib import font_manager as fm
 
-# ---------- 字体自动检测（优先宋体/衬线体）----------
-
 
 def setup_chinese_font():
     candidates = [
@@ -26,7 +24,6 @@ def setup_chinese_font():
     return 'sans-serif'
 
 
-# ---------- 全局样式（基准字号 14）----------
 BASE_SIZE = 16.5
 COLORS = {
     'bg': '#FFFFFF', 'bg_panel': '#F5F5F0', 'grid': '#E8E8E0',
@@ -47,13 +44,11 @@ plt.rcParams.update({
     'legend.fontsize': BASE_SIZE, 'mathtext.fontset': 'stix',
 })
 
-# ---------- 数据 ----------
 devices = {'A': np.array([0, 0]), 'B': np.array(
     [6, 2]), 'C': np.array([3, 5.5]), 'D': np.array([-2, 3])}
 source = np.array([2.5, 2.5])
 radii = {name: np.linalg.norm(source - pos) for name, pos in devices.items()}
 
-# ---------- 绘图 ----------
 fig, ax = plt.subplots(figsize=(11, 8.5))
 fig.patch.set_facecolor(COLORS['bg'])
 ax.set_facecolor(COLORS['bg_panel'])

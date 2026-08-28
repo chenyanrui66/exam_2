@@ -1,39 +1,27 @@
-"""
-问题二/三联合求解方案（新版）
 
-核心设计：
-1. 对问题2：建立多残骸TOA关联模型，通过解析种子+全站联合残差验真
-   解决"哪个读数属于哪个残骸"的组合爆炸问题。
-2. 对问题3：用上述模型求解具体数据，做7站残差诊断验证数据质量，
-   并验证加回5秒限制后结果不变。
-
-不依赖：两站传播时差门限、5秒时间窗（问题3验证时加回比对）。
-保留：TOA方程、一对一覆盖、因果性、空间边界、全站联合残差。
-"""
 import itertools
 import json
 import os
 import numpy as np
 import pandas as pd
 
-C = 340.0  # 声速，m/s
+C = 340.0
 NAMES = np.array(list('ABCDEFG'))
 
-# ========== 问题3原始数据（与题目docx核对一致） ==========
 lon = np.array([110.241, 110.783, 110.762, 110.251, 110.524, 110.467, 110.047])
 lat = np.array([27.204, 27.456, 27.785, 28.025, 27.617, 28.081, 27.521])
 alt = np.array([824.0, 727.0, 742.0, 850.0, 786.0, 678.0, 575.0])
 T = np.array([
-    [100.767, 164.229, 214.850, 270.065],   # A
-    [92.453, 112.220, 169.362, 196.583],     # B
-    [75.560, 110.696, 156.936, 188.020],     # C
-    [94.653, 141.409, 196.517, 258.985],     # D
-    [78.600, 86.216, 118.443, 126.669],      # E
-    [67.274, 166.270, 175.482, 266.871],     # F
-    [103.738, 163.024, 206.789, 210.306],    # G
+    [100.767, 164.229, 214.850, 270.065],
+    [92.453, 112.220, 169.362, 196.583],
+    [75.560, 110.696, 156.936, 188.020],
+    [94.653, 141.409, 196.517, 258.985],
+    [78.600, 86.216, 118.443, 126.669],
+    [67.274, 166.270, 175.482, 266.871],
+    [103.738, 163.024, 206.789, 210.306],
 ])
 
-# 坐标转换：统一为米制
+
 S = np.column_stack(((lon - 110) * 97304, (lat - 27) * 111263, alt))
 
 ALL = np.arange(7)
@@ -42,7 +30,6 @@ HIGH_BASE = np.array([150000., 220000., 120000., 0.])
 
 
 class CsvCollector:
-    """将多个结果表分节写入单个CSV。"""
 
     def __init__(self):
         self._blocks = []
@@ -62,7 +49,6 @@ class CsvCollector:
 
 
 def choose_seed_stations():
-    """选条件数最低的4台作为解析种子站（仅用于生成初值，非最终定位）。"""
     best = None
     for ids in itertools.combinations(range(7), 4):
         ii = np.asarray(ids)
@@ -77,10 +63,7 @@ SEED_COND, SEED = choose_seed_stations()
 
 
 def analytic_seeds(obs):
-    """四站平方TOA方程相减消去二次项，得到 p = p0 + p1 * tau。
-    代回原始方程得一元二次，至多两个解析种子。
-    几何：三个根平面交于一条直线，音爆点参数化于时刻 tau。
-    """
+
     ss = S[SEED]
     tt = obs[SEED]
     A = 2 * (ss[1:] - ss[0])
@@ -107,14 +90,12 @@ def analytic_seeds(obs):
 
 
 def res(theta, obs):
-    """全部7站的TOA残差向量：实测 - 预测到达时刻。"""
+
     return obs - theta[3] - np.linalg.norm(S - theta[:3], axis=1) / C
 
 
 def refine(theta, obs):
-    """全部7站有界Levenberg-Marquardt精化。
-    不使用5秒窗口，也不使用两站传播时差门限。
-    """
+
     high = HIGH_BASE.copy()
     high[3] = obs.min()  # 因果性：音爆时刻不能晚于任何观测
     scale = np.array([50000., 80000., 30000., 100.])
@@ -142,16 +123,14 @@ def refine(theta, obs):
 
 
 def candidate_events(threshold=0.02):
-    """枚举 4^7 = 16384 种单事件组合，无两站时差门限或5秒判断。
-    单事件：假设存在一个残骸，从每台设备各取一个读数。
-    """
+
     keep = []
     root_valid = 0
     for choice in itertools.product(range(4), repeat=7):
         choice = np.asarray(choice, dtype=int)
         obs = T[ALL, choice]
         for seed in analytic_seeds(obs):
-            # 仅因果性与空间边界
+
             if not (np.all(seed[:3] >= LOW[:3]) and
                     np.all(seed[:3] <= HIGH_BASE[:3]) and
                     seed[3] <= obs.min()):
@@ -167,9 +146,7 @@ def candidate_events(threshold=0.02):
 
 
 def exact_cover(candidates):
-    """从候选集中选出4个单事件，使每台设备的4个读数被恰好各用一次。
-    不使用5秒约束，只实施每站一对一覆盖。
-    """
+
     best = None
     ncover = 0
     for ids in itertools.combinations(range(len(candidates)), 4):
@@ -185,9 +162,7 @@ def exact_cover(candidates):
 
 
 def pdop_analysis(theta, ids):
-    """计算给定设备子集的几何精度因子(PDOP)。
-    位置项乘1000使单位为 km/s。
-    """
+
     d = theta[:3] - S[ids]
     dd = np.linalg.norm(d, axis=1)
     H = np.column_stack((d / (C * dd[:, None]), np.ones(len(ids))))
@@ -201,20 +176,17 @@ def pdop_analysis(theta, ids):
 
 
 def solve():
-    """主求解流程。"""
+
     collector = CsvCollector()
     seed_name = "".join(NAMES[SEED])
 
-    # 步骤1：生成单事件候选
     cand, roots = candidate_events()
 
-    # 步骤2：精确覆盖
     best, ncover = exact_cover(cand)
 
     if best is None:
         raise RuntimeError("没有精确覆盖；可提高阈值检查。")
 
-    # 步骤3：收集结果
     out = []
     for j, x in enumerate(sorted(best[1], key=lambda q: q["theta"][3]), 1):
         th = x["theta"]
@@ -285,11 +257,9 @@ def solve():
     df_pdop = pd.DataFrame(pdop_rows)
     collector.add("PDOP分析", df_pdop)
 
-    # 保存CSV
     output_path = "./output/q2q3_results.csv"
     collector.save(output_path)
 
-    # 同时保留JSON
     result = {
         "seed_stations": seed_name,
         "seed_cond": SEED_COND,

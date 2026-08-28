@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 import os
 import numpy as np
 import pandas as pd
@@ -7,9 +7,7 @@ from scipy.optimize import least_squares
 
 from csv_writer import CsvCollector
 
-# ============================================================================
-# 数据定义：7台监测设备的 (经度°E, 纬度°N, 高程m, 到达时刻s)
-# ============================================================================
+
 devs = {
     'A': (110.241, 27.204, 824, 100.767),
     'B': (110.780, 27.456, 727, 112.220),
@@ -19,71 +17,36 @@ devs = {
     'F': (110.467, 27.921, 678, 266.871),
     'G': (110.047, 27.121, 575, 163.024),
 }
-c = 340.0                        # 声速，单位 m/s
-lon0, lat0 = 110.241, 27.204     # 局部坐标原点（取设备 A 的位置）
-Klon, Klat = 97.304e3, 111.263e3  # 每度经纬度折合的米数
+c = 340.0
+lon0, lat0 = 110.241, 27.204
+Klon, Klat = 97.304e3, 111.263e3
 
-# 将经纬度高程转换为局部东-北-天直角坐标 (m)
-# x: 东向, y: 北向, z: 天向（高程）
+
 pos = {k: np.array([(v[0]-lon0)*Klon, (v[1]-lat0)*Klat, float(v[2])])
        for k, v in devs.items()}
 tobs = {k: v[3] for k, v in devs.items()}
 
-# ============================================================================
-# 核心函数
-# ============================================================================
-
 
 def residual(v, P, T):
-    """
-    计算残差向量。
-    残差 r_i = ||S - P_i|| - c*(t_i - t0)，单位：米。
-    物理含义：当前假设的音爆点 S 到设备 i 的几何距离，
-             与声波在记录时间差内传播距离之差。
-    若解完全正确且数据无误差，所有 r_i = 0。
-
-    参数:
-        v: [x, y, z, t0] —— 音爆点坐标和发生时刻
-        P: n×3 数组 —— 设备坐标
-        T: n 数组 —— 设备记录的到达时刻
-    返回:
-        n 数组 —— 各设备的残差
-    """
     return np.linalg.norm(P - v[:3], axis=1) - c * (T - v[3])
 
 
 def solve_toa(keys, P=None, T=None):
-    """
-    TOA（到达时间）定位求解。
-    分两步：1) 平方后两两相减线性化求初值；
-           2) 多初值非线性最小二乘精炼，防伪解分支。
 
-    参数:
-        keys: 参与求解的设备标识列表，如 ['A','B','C','G']
-        P: 可选，自定义设备坐标数组；默认从 pos 提取
-        T: 可选，自定义到达时刻数组；默认从 tobs 提取
-    返回:
-        (RMS残差, 解向量[x, y, z, t0])
-    """
     if P is None:
         P = np.array([pos[k] for k in keys])
     if T is None:
         T = np.array([tobs[k] for k in keys])
 
-    # --- 第一步：平方后两两相减，消去二次项，得到线性方程组 ---
-    # 原方程: ||S - P_i|| = c*(t_i - t0)
-    # 平方展开后，用第 i 式减第 1 式，消去 ||S||² 和 t0²
     A, b = [], []
     for i in range(1, len(keys)):
-        # 2*(P_i - P_1)·S - 2*c²*(t_i - t_1)*t0 = ||P_i||² - ||P_1||² - c²*(t_i² - t_1²)
+
         A.append(np.concatenate([2*(P[i]-P[0]), [-2*c**2*(T[i]-T[0])]]))
         b.append(P[i] @ P[i] - P[0] @ P[0] - c**2*(T[i]**2 - T[0]**2))
 
     X, *_ = np.linalg.lstsq(np.array(A), np.array(b), rcond=None)
     t0_init = X[3] if np.isfinite(X[3]) else 15.0
 
-    # --- 第二步：多初值非线性精炼 ---
-    # 以线性化解为初值，再补充几个高空初值，防止落入伪解分支
     inits = [X[:3]] + [
         np.array([(110.5-lon0)*Klon, (27.31-lat0)*Klat, z])
         for z in (1000.0, 5000.0, 12000.0)
@@ -95,10 +58,9 @@ def solve_toa(keys, P=None, T=None):
             residual,
             np.concatenate([x0, [t0_init]]),
             args=(P, T),
-            method='trf'  # Trust Region Reflective
+            method='trf'
         )
         rms = np.sqrt(np.mean(r.fun**2))
-        # 筛选物理合理的解：高程 > 0，t0 在合理时间窗内
         if r.x[2] > 0 and -100 < r.x[3] < 500:
             if best is None or rms < best[0]:
                 best = (rms, r.x)
@@ -107,15 +69,12 @@ def solve_toa(keys, P=None, T=None):
 
 
 def lonlat(v):
-    """将局部直角坐标解转换回 (经度, 纬度, 高程, t0)。"""
+
     return lon0 + v[0]/Klon, lat0 + v[1]/Klat, v[2], v[3]
 
 
 def residual_table(v_sol, P_all, T_all, dev_list, highlight_set):
-    """
-    生成回测残差表（DataFrame），标记参与拟合的设备并给出评判。
-    返回: (DataFrame, 残差数组)
-    """
+
     res = residual(v_sol, P_all, T_all)
     rows = []
     for i, k in enumerate(dev_list):
@@ -138,10 +97,6 @@ def residual_table(v_sol, P_all, T_all, dev_list, highlight_set):
     return pd.DataFrame(rows), res
 
 
-# ============================================================================
-# 主流程
-# ============================================================================
-
 def main():
     cc = CsvCollector()
 
@@ -149,9 +104,6 @@ def main():
     P_all = np.array([pos[k] for k in dev_list])
     T_all = np.array([tobs[k] for k in dev_list])
 
-    # ------------------------------------------------------------------------
-    # 阶段一：求解三个关键组合
-    # ------------------------------------------------------------------------
     rms_abcg, v_abcg = solve_toa(list('ABCG'))
     rms_abeg, v_abeg = solve_toa(list('ABEG'))
     rms_5, v_5 = solve_toa(list('ABCEG'))
@@ -173,9 +125,6 @@ def main():
         })
     cc.add("阶段一：三个关键组合的解", pd.DataFrame(sol_rows))
 
-    # ------------------------------------------------------------------------
-    # 阶段二：回测残差对比——核心论证
-    # ------------------------------------------------------------------------
     df_abcg, res_abcg = residual_table(v_abcg, P_all, T_all, dev_list, 'ABCG')
     cc.add("阶段二：ABCG 四台解回测全部7台", df_abcg)
 
@@ -185,9 +134,6 @@ def main():
     df_5, res_5 = residual_table(v_5, P_all, T_all, dev_list, 'ABCEG')
     cc.add("阶段二：ABCEG 五台联合解回测全部7台", df_5)
 
-    # ------------------------------------------------------------------------
-    # 阶段三：关键对比指标
-    # ------------------------------------------------------------------------
     d_xy = np.hypot(v_abcg[0]-v_abeg[0], v_abcg[1]-v_abeg[1])
     d_z = abs(v_abcg[2] - v_abeg[2])
     d_t = abs(v_abcg[3] - v_abeg[3])
@@ -230,9 +176,6 @@ def main():
     ])
     cc.add("阶段三：关键对比指标", metrics)
 
-    # ------------------------------------------------------------------------
-    # 阶段四：子集投票（稳健性检验）
-    # ------------------------------------------------------------------------
     votes = []
     for combo in combinations('ABCEG', 4):
         keys = list(combo)
@@ -257,9 +200,6 @@ def main():
     cc.add("阶段四：{A,B,C,E,G} 内全部4台子集投票", pd.DataFrame(vote_rows),
            index=False)
 
-    # ------------------------------------------------------------------------
-    # 阶段五：蒙特卡洛噪声散布评估
-    # ------------------------------------------------------------------------
     rng = np.random.default_rng(42)
     keys5 = list('ABCEG')
     P5 = np.array([pos[k] for k in keys5])
@@ -268,10 +208,10 @@ def main():
     def monte_carlo(coord_noise_deg, time_noise_s, n=300):
         outs = []
         for _ in range(n):
-            # 坐标加噪：经纬度方向
+
             dP = P5 + rng.uniform(-coord_noise_deg, coord_noise_deg, P5.shape) \
                 * np.array([Klon, Klat, 0.0])
-            # 时刻加噪
+
             dT = T5 + rng.uniform(-time_noise_s, time_noise_s, T5.shape)
             r = least_squares(residual, v_5.copy(), args=(dP, dT))
             outs.append(r.x)
@@ -279,8 +219,8 @@ def main():
         dh = np.hypot(outs[:, 0]-v_5[0], outs[:, 1]-v_5[1])
         return np.percentile(dh, 95), outs[:, 2].std()
 
-    r95a, zsa = monte_carlo(0.0005, 0.0005)   # 坐标量化 + 时刻舍入
-    r95b, zsb = monte_carlo(0.0, 0.5)          # ±0.5s 时间误差
+    r95a, zsa = monte_carlo(0.0005, 0.0005)
+    r95b, zsb = monte_carlo(0.0, 0.5)          #
 
     mc = pd.DataFrame([
         {'噪声假设': '坐标量化噪声(±0.0005°) + 时刻舍入(±0.0005s)',
@@ -295,9 +235,6 @@ def main():
     ])
     cc.add("阶段五：蒙特卡洛噪声散布评估", mc)
 
-    # ------------------------------------------------------------------------
-    # 最终结论
-    # ------------------------------------------------------------------------
     lo, la, z, t0 = lonlat(v_5)
     conclusion = pd.DataFrame([
         {'项目': '音爆位置', '结果': f'东经 {lo:.3f}°, 北纬 {la:.3f}°, 高程约 {z:.0f} m'},
@@ -307,9 +244,6 @@ def main():
     ])
     cc.add("最终结论", conclusion)
 
-    # ------------------------------------------------------------------------
-    # 保存结果
-    # ------------------------------------------------------------------------
     out_dir = os.path.join('.', 'output')
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, 'q1_results.csv')

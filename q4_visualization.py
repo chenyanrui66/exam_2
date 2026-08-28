@@ -1,15 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-问题4 绘图代码：台网布局图 + 3D误差分布对比图
-================================================
-数据源：./output/问题4_q4_results.csv（由 问题4_误差修正与加密台网方案.py 生成，
-分节CSV，用 csv_writer.read_sections 解析），本脚本不再重新跑蒙特卡洛。
 
-输出：./output/figs/问题4_台网布局与误差对比.png
-控制台仅打印"结果已保存"字样。
-
-运行：python 问题4_绘图代码.py
-"""
 import os
 
 import matplotlib.pyplot as plt
@@ -24,8 +13,6 @@ FIG_DIR = os.path.join(_here, "output", "figs")
 
 
 def _zh_font():
-    """探测系统中文字体，返回 FontProperties 供中文文本逐处使用
-    （不改动 matplotlib 全局配置；找不到中文字体时返回 None，回退默认字体）。"""
     keys = ("CJK", "Hei", "Song", "WenQuanYi", "SimSun", "SimHei",
             "Microsoft YaHei", "PingFang", "Source Han")
     for f in font_manager.fontManager.ttflist:
@@ -44,16 +31,16 @@ ZH = _zh_font()
 
 
 def to_xy_km(lon_deg, lat_deg):
-    """经纬度 → 局部平面坐标 (km)，与主方案的坐标系一致（原点 110°E, 27°N）"""
+
     return (lon_deg - 110) * 97304.0 / 1000.0, (lat_deg - 27) * 111263.0 / 1000.0
 
 
 def main():
     sec = read_sections(CSV_PATH)
-    sta = sec["台网台站"]            # 台站坐标节
-    deb = sec["残骸音爆点真值"]       # 残骸投影节
-    d7 = sec["误差明细_原7台"]        # 7台逐次误差（CDF数据源）
-    d20 = sec["误差明细_20台加密"]    # 20台逐次误差
+    sta = sec["台网台站"]
+    deb = sec["残骸音爆点真值"]
+    d7 = sec["误差明细_原7台"]
+    d20 = sec["误差明细_20台加密"]
 
     sx, sy = to_xy_km(sta["经度(°E)"].to_numpy(), sta["纬度(°N)"].to_numpy())
     dx, dy = to_xy_km(deb["经度(°E)"].to_numpy(), deb["纬度(°N)"].to_numpy())
@@ -61,7 +48,6 @@ def main():
 
     fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.8))
 
-    # --- 左图：台网布局 ---
     ax = axes[0]
     m_old = grp == "原台站"
     ax.scatter(sx[m_old], sy[m_old], marker='^', s=90, c='#1f77b4',
@@ -78,7 +64,7 @@ def main():
         ax.annotate(deb["残骸"].iloc[j], (dx[j], dy[j]),
                     textcoords="offset points", xytext=(8, -3),
                     fontsize=10, color='#d62728')
-    # 内环/外环示意虚线：圆心取"中心"台，半径由对应环台站到圆心的距离推算
+
     cx, cy = sx[grp == "中心"][0], sy[grp == "中心"][0]
     th_c = np.deg2rad(np.arange(0, 361, 5))
     for gname in ("内环", "外环"):
@@ -93,7 +79,6 @@ def main():
     ax.grid(alpha=0.3)
     ax.set_aspect('equal')
 
-    # --- 右图：3D误差经验累积分布（CDF）对比 ---
     ax = axes[1]
     for df, lab, c in [(d7, '原7台（修正后）', '#1f77b4'),
                        (d20, '20台加密', '#d62728')]:
