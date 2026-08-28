@@ -30,6 +30,20 @@ ASSOCIATION = np.array(
     dtype=int,
 )
 
+# 各设备 4 个读数的音爆抵达时间（s，题目问题三数据表），与 ASSOCIATION 行列一一对应。
+ARRIVAL_TIMES = np.array(
+    [
+        [100.767, 164.229, 214.850, 270.065],  # A
+        [92.453, 112.220, 169.362, 196.583],   # B
+        [75.560, 110.696, 156.936, 188.020],   # C
+        [94.653, 141.409, 196.517, 258.985],   # D
+        [78.600, 86.216, 118.443, 126.669],    # E
+        [67.274, 166.270, 175.482, 266.871],   # F
+        [103.738, 163.024, 206.789, 210.306],  # G
+    ],
+    dtype=float,
+)
+
 DEVICES = list("ABCDEFG")
 READING_NUMBERS = [1, 2, 3, 4]
 
@@ -86,7 +100,8 @@ def draw_heatmap(output_dir: Path) -> tuple[Path, Path]:
         spine.set_linewidth(0.8)
         spine.set_color("#555555")
 
-    # 在颜色之外直接标注残骸编号，便于黑白打印和快速核读。
+    # 在颜色之外直接标注该读数的音爆抵达时间（s），便于黑白打印和快速核读。
+    # 颜色仍按所属残骸决定，时间比编号更长，故字号适当缩小。
     text_colors = {1: "white", 2: "white", 3: "#1F2A16", 4: "#3A3300"}
     for i in range(ASSOCIATION.shape[0]):
         for j in range(ASSOCIATION.shape[1]):
@@ -94,11 +109,11 @@ def draw_heatmap(output_dir: Path) -> tuple[Path, Path]:
             ax.text(
                 j,
                 i,
-                f"#{debris_id}",
+                f"{ARRIVAL_TIMES[i, j]:.3f}",
                 ha="center",
                 va="center",
                 color=text_colors[debris_id],
-                fontproperties=_font(16, bold=True),
+                fontproperties=_font(11, bold=True),
             )
 
     legend_handles = [

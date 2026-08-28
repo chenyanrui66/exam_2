@@ -28,8 +28,8 @@ warnings.filterwarnings("ignore")
 OUTPUT_DIR = Path("./output/figs")
 FIGURE_NO = 1  # 按全文图号连续性修改
 
-LON_MIN, LON_MAX = 110.0, 111.0
-LAT_MIN, LAT_MAX = 27.0, 28.0
+LON_MIN, LON_MAX = 110.0, 111.2
+LAT_MIN, LAT_MAX = 27.0, 28.2
 GRID_SIZE = 241
 SOURCE_ALT_KM = 12.0
 
@@ -206,19 +206,6 @@ def draw_subplot(ax: plt.Axes, combination: str,
     ax.tick_params(labelsize=12)
     ax.grid(color="white", linestyle="--", linewidth=0.55, alpha=0.48)
 
-    # 左上角信息框
-    info_text = (
-        f"组合 {combination} | {len(combination)}台\n"
-        f"冗余自由度 {redundancy} | 高程 {SOURCE_ALT_KM:g} km"
-    )
-    ax.text(
-        0.02, 0.975, info_text,
-        transform=ax.transAxes, va="top", ha="left", fontsize=10,
-        bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
-                  edgecolor="#555555", alpha=0.90),
-        zorder=20,
-    )
-
     # 左下角统计信息框
     stat_text = (
         f"中位PDOP {stats['median']:.2f} | P95 {stats['p95']:.2f}\n"
@@ -226,7 +213,7 @@ def draw_subplot(ax: plt.Axes, combination: str,
     )
     ax.text(
         0.02, 0.025, stat_text,
-        transform=ax.transAxes, va="bottom", ha="left", fontsize=10,
+        transform=ax.transAxes, va="bottom", ha="left", fontsize=12,
         bbox=dict(boxstyle="round,pad=0.32", facecolor="white",
                   edgecolor="#666666", alpha=0.88),
         zorder=20,
@@ -244,44 +231,20 @@ def make_combined_figure(lon4, lat4, pdop4, lon5, lat5, pdop5) -> None:
 
     # 左图：4台 ABEF
     contour4 = draw_subplot(axes[0], COMBINATION_4, lon4, lat4, pdop4)
-    axes[0].set_title(f"(a) {COMBINATION_4} 组合（4台设备）", fontsize=14, pad=8)
+    axes[0].set_title(f"(a) {COMBINATION_4} 组合", fontsize=14, pad=8)
 
     # 右图：5台 ABDEF
     contour5 = draw_subplot(axes[1], COMBINATION_5, lon5, lat5, pdop5)
-    axes[1].set_title(f"(b) {COMBINATION_5} 组合（5台设备）", fontsize=14, pad=8)
+    axes[1].set_title(f"(b) {COMBINATION_5} 组合", fontsize=14, pad=8)
 
     # 各子图独立 colorbar
     cbar4 = fig.colorbar(contour4, ax=axes[0], pad=0.02, fraction=0.046)
-    cbar4.set_label("PDOP（km/s）", fontsize=10)
-    cbar4.ax.tick_params(labelsize=9)
+    cbar4.set_label("PDOP（km/s）", fontsize=12)
+    cbar4.ax.tick_params(labelsize=10)
 
     cbar5 = fig.colorbar(contour5, ax=axes[1], pad=0.02, fraction=0.046)
-    cbar5.set_label("PDOP（km/s）", fontsize=10)
-    cbar5.ax.tick_params(labelsize=9)
-
-    # ---- 区域外台站注记（图下单独说明） ----
-    outside_4 = get_outside_stations(COMBINATION_4)
-    outside_5 = get_outside_stations(COMBINATION_5)
-
-    note_lines = []
-    if outside_4:
-        note_lines.append(
-            f"(a) {COMBINATION_4} 区域外台站：{', '.join(outside_4)}"
-        )
-    if outside_5:
-        note_lines.append(
-            f"(b) {COMBINATION_5} 区域外台站：{', '.join(outside_5)}"
-        )
-
-    if note_lines:
-        note_text = "；".join(note_lines) + "。"
-    else:
-        note_text = "注：所有台站均位于计算区域内。"
-
-    fig.text(0.515, 0.09, note_text, ha="center", va="top", fontsize=11,
-             wrap=True,
-             bbox=dict(boxstyle="round,pad=0.4", facecolor="#f8f9fa",
-                       edgecolor="#adb5bd", alpha=0.95))
+    cbar5.set_label("PDOP（km/s）", fontsize=12)
+    cbar5.ax.tick_params(labelsize=10)
 
     # 保存 PNG（600 dpi），路径保持原样
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
